@@ -1,0 +1,57 @@
+html {
+	font-size: 10pt;
+	font-family: "Courier New", Monospace;
+}
+
+.app {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+
+	margin: 20pt;
+}
+
+.footer {
+	position: fixed;
+	bottom: 0;
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+
+	margin-bottom: 5pt;
+}
+
+.footer p {
+	margin: 0;
+}
+
+pre {
+	user-select: none;
+}
+
+.box {
+	border: 1px black solid;
+	background-color: rgb(248, 248, 248);
+	margin: 5pt;
+	padding: 5pt;
+}
+
+.dropzone {
+	display: flex;
+	align-items: center;
+}
+
+.dropzone div {
+	cursor: pointer;
+
+	padding-left: 9pt;
+	padding-right: 9pt;
+	padding-top: 50pt;
+	padding-bottom: 50pt;
+}
+
+.uploadedFileLine {
+	display: flex;
+	flex-direction: row;
+}

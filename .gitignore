@@ -1,0 +1,6 @@
+*/node_modules
+.env.*
+yarn.*
+
+/client/build
+/server/files
