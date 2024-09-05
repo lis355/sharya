@@ -1,3 +1,59 @@
+/* flex */
+
+.f-flex {
+	display: flex;
+}
+
+.f-flex-direction-horizontal {
+	flex-direction: row;
+}
+
+.f-flex-direction-vertical {
+	flex-direction: column;
+}
+
+.f-horizontal-align-center {
+	justify-content: center;
+}
+
+.f-vertical-align-center {
+	align-items: center;
+}
+
+/* paddings */
+
+.p-small {
+	padding: 2.5pt;
+}
+
+.p-left-small {
+	padding-left: 2.5pt;
+}
+
+.p-right-small {
+	padding-right: 2.5pt;
+}
+
+.p-horizontal-small {
+	padding-left: 2.5pt;
+	padding-right: 2.5pt;
+}
+
+.p-top-small {
+	padding-top: 2.5pt;
+}
+
+.p-bottom-small {
+	padding-bottom: 2.5pt;
+}
+
+.p-vertical-small {
+	padding-top: 2.5pt;
+	padding-bottom: 2.5pt;
+}
+
+/* common */
+
 html {
 	font-size: 10pt;
 	font-family: "Courier New", Monospace;
@@ -15,21 +71,15 @@ button {
 	margin-right: 2.5pt;
 }
 
-.app {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
+/* custom */
 
+.app {
 	margin: 5pt;
 }
 
 .footer {
 	position: fixed;
 	bottom: 0;
-
-	display: flex;
-	flex-direction: column;
-	align-items: center;
 
 	margin-bottom: 5pt;
 }
@@ -50,11 +100,6 @@ pre {
 	padding: 5pt;
 }
 
-.dropzone {
-	display: flex;
-	align-items: center;
-}
-
 .dropzone div {
 	cursor: pointer;
 
@@ -64,13 +109,6 @@ pre {
 	padding-bottom: 50pt;
 }
 
-.fileLine {
-	/* width: 750pt; */
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-}
-
 .filesTable {
-	width: 500pt;
+	width: 600pt;
 }

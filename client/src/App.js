@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import Dropzone from "react-dropzone";
 import React from "react";
 import urlJoin from "url-join";
@@ -5,14 +6,17 @@ import urlJoin from "url-join";
 const HEADER_TOKEN = "sharya-token";
 
 function formatBytes(bytes, decimals = 2) {
-	if (bytes === 0) return "0 Bytes";
-
-	var k = 1024,
-		dm = decimals || 2,
+	const k = 1024,
 		sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
 		i = Math.floor(Math.log(bytes) / Math.log(k));
 
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
+}
+
+function formatName(name, nameMaxLength) {
+	return name.length > nameMaxLength
+		? name.slice(0, nameMaxLength - 3) + "..."
+		: name;
 }
 
 class UploadingFile {
@@ -23,41 +27,18 @@ class UploadingFile {
 	}
 }
 
-class NBSP extends React.Component {
+class UploadingFileRow extends React.Component {
 	render() {
-		return (
-			new Array(this.props.n || 1).fill(0).map((_, index) => <p key={index}>&nbsp;</p>)
-		);
-	}
-}
-
-const FILE_LINE_CHARS_AMOUNT = 120;
-
-class UploadingFileLine extends React.Component {
-	render() {
-		const lineWidth = FILE_LINE_CHARS_AMOUNT;
-
+		const nameString = formatName(this.props.file.name, this.props.nameMaxLength);
 		const sizeString = `[${formatBytes(this.props.file.size)}]`;
 		const percentString = `${(this.props.file.percent * 100).toFixed(2)}%`;
 
-		let avaliableSpace = lineWidth - sizeString.length - percentString.length - 2;
-
-		let nameString = this.props.file.name;
-		let loadingString = "";
-		if (nameString.length > avaliableSpace) {
-			nameString = nameString.slice(0, avaliableSpace - 3) + "...";
-		} else {
-			avaliableSpace -= nameString.length + 1;
-			loadingString = ".".repeat(avaliableSpace);
-		}
-
 		return (
-			<div className="fileLine">
-				<p>{nameString}</p><NBSP n={1} />
-				{loadingString && <><p>{loadingString}</p><NBSP n={1} /></>}
-				<p>{sizeString}</p><NBSP n={1} />
-				<p>{percentString}</p>
-			</div>
+			<tr>
+				<td>{nameString}</td>
+				<td>{sizeString}</td>
+				<td>{percentString}</td>
+			</tr>
 		);
 	}
 }
@@ -70,30 +51,18 @@ class UploadedFile {
 	}
 }
 
-class UploadedFileLine extends React.Component {
+class UploadedFileRow extends React.Component {
 	render() {
-		const lineWidth = FILE_LINE_CHARS_AMOUNT;
-
+		const nameString = formatName(this.props.file.name, this.props.nameMaxLength);
 		const sizeString = `[${formatBytes(this.props.file.size)}]`;
-		const percentString = `${(this.props.file.percent * 100).toFixed(2)}%`;
-
-		let avaliableSpace = lineWidth - sizeString.length - percentString.length - 3 - "copy link".length - "delete".length;
-
-		let nameString = this.props.file.name;
-		let loadingString = "";
-		if (nameString.length > avaliableSpace) {
-			nameString = nameString.slice(0, avaliableSpace - 3) + "...";
-		} else {
-			avaliableSpace -= nameString.length + 1;
-		}
 
 		return (
-			<div className="fileLine">
-				<p>{nameString}</p><NBSP n={1} />
-				<p>{sizeString}</p>
+			<tr>
+				<td>{nameString}</td>
+				<td>{sizeString}</td>
 				<button>copy link</button>
 				<button>delete</button>
-			</div>
+			</tr>
 		);
 	}
 }
@@ -104,7 +73,16 @@ class App extends React.Component {
 	constructor(props) {
 		super(props);
 
+		const storageTimeDurations = [
+			dayjs.duration({ days: 1 }),
+			dayjs.duration({ days: 3 }),
+			dayjs.duration({ days: 7 }),
+			dayjs.duration({ days: 30 })
+		];
+
 		this.state = {
+			storageTimeDurations,
+			storageTime: storageTimeDurations[1],
 			uploadingFiles: [],
 			uploadedFiles: []
 		};
@@ -147,7 +125,7 @@ class App extends React.Component {
 
 	render() {
 		return (
-			<div className="app">
+			<div className="app f-flex f-flex-direction-vertical f-vertical-align-center">
 				{/* <p>{localStorage.getItem(HEADER_TOKEN)}</p> */}
 
 				<pre>
@@ -164,6 +142,15 @@ class App extends React.Component {
 					}
 				</pre>
 
+				<div className="f-flex f-flex-direction-horizontal f-horizontal-align-center">
+					<p className="p-left-small p-right-small">storage period</p>
+					<select>
+						{this.state.storageTimeDurations.map((duration, index) => (
+							<option key={index} value={duration}>{duration.humanize()}</option>
+						))}
+					</select>
+				</div>
+
 				<Dropzone onDrop={files => {
 					this.setState({
 						uploadedFiles: this.state.uploadedFiles.concat(files)
@@ -173,6 +160,7 @@ class App extends React.Component {
 						const formData = new FormData();
 						formData.append("file", file);
 						formData.append("name", file.name);
+						formData.append("storageTime", this.state.storageTime.asMilliseconds());
 
 						this.props.requestProvider({
 							url: urlJoin(process.env.REACT_APP_API_URL, "/upload/"),
@@ -205,40 +193,29 @@ class App extends React.Component {
 
 				{this.state.uploadingFiles.length > 0 &&
 					<div className="container">
-						{this.state.uploadingFiles.map((file, index) =>
-							<UploadingFileLine key={index} file={file} />
-						)}
+						<table className="filesTable">
+							<tbody>
+								{this.state.uploadingFiles.map((file, index) =>
+									<UploadingFileRow key={index} file={file} nameMaxLength={80} />
+								)}
+							</tbody>
+						</table>
 					</div>
 				}
 
 				{this.state.uploadedFiles.length > 0 &&
 					<div className="container">
-						{this.state.uploadedFiles.map((file, index) =>
-							<UploadedFileLine key={index} file={file} />
-						)}
+						<table className="filesTable">
+							<tbody>
+								{this.state.uploadedFiles.map((file, index) =>
+									<UploadedFileRow key={index} file={file} nameMaxLength={65} />
+								)}
+							</tbody>
+						</table>
 					</div>
 				}
 
-				<div className="container">
-					<table className="filesTable">
-						<tbody>
-							<tr>
-								<td>test.jps</td>
-								<td>......</td>
-								<td>[976.56 KB]</td>
-								<td>24.18%</td>
-								<td><button>copy link</button></td>
-								<td><button>delete</button></td>
-							</tr>
-							<tr>
-								<td>uploading files</td>
-								<td>{this.state.uploadingFiles.length}</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<div className="footer">
+				<div className="footer f-flex f-flex-direction-vertical">
 					<p>made by <a href="https://telegram.me/lis355">@lis355</a></p>
 					<p>sharya <a href="https://github.com/lis355/sharya">github page</a></p>
 				</div>
