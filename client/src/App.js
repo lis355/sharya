@@ -3,26 +3,14 @@ import Dropzone from "react-dropzone";
 import React from "react";
 import urlJoin from "url-join";
 
-const HEADER_TOKEN = "sharya-token";
-
-function formatBytes(bytes, decimals = 2) {
-	const k = 1024,
-		sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"],
-		i = Math.floor(Math.log(bytes) / Math.log(k));
-
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
-}
-
-function formatName(name, nameMaxLength) {
-	return name.length > nameMaxLength
-		? name.slice(0, nameMaxLength - 3) + "..."
-		: name;
-}
+import { formatBytes, formatName, randomId } from "./tools.js";
 
 class UploadingFile {
-	constructor({ name, size, percent }) {
+	constructor({ id, name, size, date, percent }) {
+		this.id = id;
 		this.name = name;
 		this.size = size;
+		this.date = date;
 		this.percent = percent;
 	}
 }
@@ -44,10 +32,10 @@ class UploadingFileRow extends React.Component {
 }
 
 class UploadedFile {
-	constructor({ name, size, tinyId }) {
+	constructor({ tinyId, name, size, }) {
+		this.tinyId = tinyId;
 		this.name = name;
 		this.size = size;
-		this.tinyId = tinyId;
 	}
 }
 
@@ -60,13 +48,25 @@ class UploadedFileRow extends React.Component {
 			<tr>
 				<td>{nameString}</td>
 				<td>{sizeString}</td>
-				<button>copy link</button>
-				<button>delete</button>
+				<td>
+					<button onClick={() => window.navigator.clipboard.writeText(this.props.file.tinyId)}>copy link</button>
+				</td>
+				<td>
+					<button>delete</button>
+				</td>
 			</tr>
 		);
 	}
 }
 
+const TOKEN_HEADER = "sharya-token";
+const RENDER_UPLOADING_FILES_AFTER_DURATION = dayjs.duration({ seconds: 0.5 });
+
+// NOTE why componentdidmount called two times
+// https://stackoverflow.com/questions/63383473/why-componentdidmount-called-two-times
+// Multiple componentDidMount calls may be caused by using <React.StrictMode> around your component. After removing it double calls are gone.
+// This is intended behavior to help detect unexpected side effects. You can read more about it in the docs.
+// It happens only in development environment, while in production componentDidMount is called only once even with <React.StrictMode>.
 let appMounted = false;
 
 class App extends React.Component {
@@ -89,133 +89,202 @@ class App extends React.Component {
 	}
 
 	async componentDidMount() {
-		if (!appMounted) {
-			appMounted = true;
-
-			this.props.requestProvider.defaults.headers.common[HEADER_TOKEN] = localStorage.getItem(HEADER_TOKEN);
-
-			const authResponse = await this.props.requestProvider({
-				url: urlJoin(process.env.REACT_APP_API_URL, "/auth/"),
-				method: "GET"
-			});
-
-			localStorage.setItem(HEADER_TOKEN, authResponse.data);
-
-			await this.props.requestProvider({
-				url: urlJoin(process.env.REACT_APP_API_URL, "/uploadedFiles/"),
-				method: "GET"
-			});
+		if (process.env.NODE_ENV === "development") {
+			if (!appMounted) appMounted = true;
+			else return;
 		}
 
-		// DEBUG
-		setInterval(() => {
-			const uploadingFiles = [
-				new UploadingFile({ name: "test.jps", size: 999999, percent: Math.random() }),
-				new UploadingFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, percent: Math.random() })
-			];
-			this.setState({
-				uploadingFiles,
-				uploadedFiles: [
-					new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, tinyId: "tesy" }),
-					new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 111222, tinyId: "tesy" })
-				]
-			});
-		}, 1000);
+		// console.log(localStorage.getItem(HEADER_TOKEN));
+
+		await this.requestAuth();
+		await this.requestUploadedFiles();
+
+		// const uploadingFile1 = new UploadingFile({ id: randomId(), name: "test.jps", size: 999999, percent: 0 });
+
+		// const uploadingFiles = [
+		// 	uploadingFile1,
+		// 	new UploadingFile({ id: randomId(), name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, percent: 0 })
+		// ];
+
+		// this.setState({
+		// 	uploadingFiles,
+		// 	uploadedFiles: [
+		// 		new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, tinyId: "tesy" }),
+		// 		new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 111222, tinyId: "tesy" })
+		// 	]
+		// });
+
+		// setInterval(() => {
+		// 	const uploadingFiles = this.state.uploadingFiles.map(file => {
+		// 		return file.id === uploadingFile1.id
+		// 			? new UploadingFile({ id: uploadingFile1.id, name: uploadingFile1.name, size: uploadingFile1.size, percent: file.percent + 0.01 })
+		// 			: file;
+		// 	});
+
+		// 	this.setState({ uploadingFiles });
+		// }, 1000);
+	}
+
+	async requestAuth() {
+		this.props.requestProvider.defaults.headers.common[TOKEN_HEADER] = localStorage.getItem(TOKEN_HEADER);
+
+		const authResponse = await this.props.requestProvider({
+			url: urlJoin(process.env.REACT_APP_API_URL, "/auth/"),
+			method: "GET"
+		});
+
+		localStorage.setItem(TOKEN_HEADER, authResponse.data);
+	}
+
+	async requestUploadedFiles() {
+		const getUploadedFilesResponse = await this.props.requestProvider({
+			url: urlJoin(process.env.REACT_APP_API_URL, "/uploadedFiles/"),
+			method: "GET"
+		});
+
+		const uploadedFiles = getUploadedFilesResponse.data.map(file => new UploadedFile({ tinyId: file.tinyId, name: file.name, size: file.size }));
+
+		this.setState({ uploadedFiles });
+	}
+
+	renderLogo() {
+		return (
+			<pre>
+				{`  ██████  ██░ ██  ▄▄▄       ██▀███ ▓██   ██▓ ▄▄▄      
+▒██    ▒ ▓██░ ██▒▒████▄    ▓██ ▒ ██▒▒██  ██▒▒████▄    
+░ ▓██▄   ▒██▀▀██░▒██  ▀█▄  ▓██ ░▄█ ▒ ▒██ ██░▒██  ▀█▄  
+▒   ██▒░▓█ ░██ ░██▄▄▄▄██ ▒██▀▀█▄   ░ ▐██▓░░██▄▄▄▄██ 
+▒██████▒▒░▓█▒░██▓ ▓█   ▓██▒░██▓ ▒██▒ ░ ██▒▓░ ▓█   ▓██▒
+▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒ ▒▒   ▓▒█░░ ▒▓ ░▒▓░  ██▒▒▒  ▒▒   ▓▒█░
+░ ░▒  ░ ░ ▒ ░▒░ ░  ▒   ▒▒ ░  ░▒ ░ ▒░▓██ ░▒░   ▒   ▒▒ ░
+░  ░  ░   ░  ░░ ░  ░   ▒     ░░   ░ ▒ ▒ ░░    ░   ▒   
+░   ░  ░  ░      ░  ░   ░     ░ ░           ░  ░
+							░ ░               `
+				}
+			</pre>
+		);
+	}
+
+	renderStorageTimeSelector() {
+		return (
+			<div className="f-flex f-flex-direction-horizontal f-horizontal-align-center">
+				<p className="p-left-small p-right-small">storage period</p>
+				<select
+					value={this.state.storageTime}
+					onChange={event => this.setState({ storageTime: dayjs.duration({ milliseconds: event.target.value }) })}
+				>
+					{this.state.storageTimeDurations.map((duration, index) => (
+						<option key={index} value={duration.asMilliseconds()}>{duration.humanize()}</option>
+					))}
+				</select>
+			</div>
+		);
+	}
+
+	renderDropzone() {
+		return (
+			<Dropzone onDrop={files => {
+				files.forEach(file => {
+					const uploadingFile = new UploadingFile({ id: randomId(), name: file.name, size: file.size, date: dayjs(), percent: 0 });
+
+					const uploadingFiles = this.state.uploadingFiles.concat(uploadingFile);
+
+					this.setState({ uploadingFiles });
+
+					const formData = new FormData();
+					formData.append("file", file);
+					formData.append("name", file.name);
+					formData.append("storageTime", this.state.storageTime.asMilliseconds());
+
+					this.props.requestProvider({
+						url: urlJoin(process.env.REACT_APP_API_URL, "/upload/"),
+						method: "POST",
+						data: formData,
+						headers: {
+							"Content-Type": "multipart/form-data"
+						},
+						onUploadProgress: progressEvent => {
+							const uploadingFiles = this.state.uploadingFiles.map(file => {
+								return file.id === uploadingFile.id
+									? new UploadingFile({ id: uploadingFile.id, name: uploadingFile.name, size: uploadingFile.size, date: uploadingFile.date, percent: progressEvent.progress })
+									: file;
+							});
+
+							this.setState({ uploadingFiles });
+						}
+					})
+						.then(response => {
+							const uploadingFiles = this.state.uploadingFiles.filter(file => file.id !== uploadingFile.id);
+
+							this.setState({ uploadingFiles });
+
+							// const uploadedFile = new UploadedFile({ id: randomId(), name: file.name, size: file.size, date: dayjs(), percent: 0 });
+
+							// const uploadedFiles = this.state.uploadingFiles.concat(uploadingFile);
+
+							// this.setState({ uploadedFiles });
+						})
+						.catch(error => {
+							const uploadingFiles = this.state.uploadingFiles.filter(file => file.id !== uploadingFile.id);
+
+							this.setState({ uploadingFiles });
+						});
+				});
+			}}>
+				{({ getRootProps, getInputProps }) => (
+					<section className="dropzone container f-flex f-flex-direction-vertical f-horizontal-align-center">
+						<div {...getRootProps()}>
+							<input {...getInputProps()} />
+							<p>Drag'n'drop files here / click to select files</p>
+						</div>
+					</section>
+				)}
+			</Dropzone>
+		);
+	}
+
+	renderUploadingFiles() {
+		const uploadingFiles = this.state.uploadingFiles.filter(file => dayjs() - file.date > RENDER_UPLOADING_FILES_AFTER_DURATION);
+
+		return (
+			uploadingFiles.length > 0 &&
+			<div className="container">
+				<table className="filesTable">
+					<tbody>
+						{uploadingFiles.map((file, index) =>
+							<UploadingFileRow key={index} file={file} nameMaxLength={80} />
+						)}
+					</tbody>
+				</table>
+			</div>
+		);
+	}
+
+	renderUploadedFiles() {
+		return (
+			this.state.uploadedFiles.length > 0 &&
+			<div className="container">
+				<table className="filesTable">
+					<tbody>
+						{this.state.uploadedFiles.map((file, index) =>
+							<UploadedFileRow key={index} file={file} nameMaxLength={65} />
+						)}
+					</tbody>
+				</table>
+			</div>
+		);
 	}
 
 	render() {
 		return (
 			<div className="app f-flex f-flex-direction-vertical f-vertical-align-center">
-				{/* <p>{localStorage.getItem(HEADER_TOKEN)}</p> */}
+				{this.renderLogo()}
+				{this.renderStorageTimeSelector()}
+				{this.renderDropzone()}
+				{this.renderUploadingFiles()}
+				{this.renderUploadedFiles()}
 
-				<pre>
-					{`  ██████  ██░ ██  ▄▄▄       ██▀███ ▓██   ██▓ ▄▄▄      
-▒██    ▒ ▓██░ ██▒▒████▄    ▓██ ▒ ██▒▒██  ██▒▒████▄    
-░ ▓██▄   ▒██▀▀██░▒██  ▀█▄  ▓██ ░▄█ ▒ ▒██ ██░▒██  ▀█▄  
-  ▒   ██▒░▓█ ░██ ░██▄▄▄▄██ ▒██▀▀█▄   ░ ▐██▓░░██▄▄▄▄██ 
-▒██████▒▒░▓█▒░██▓ ▓█   ▓██▒░██▓ ▒██▒ ░ ██▒▓░ ▓█   ▓██▒
-▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒ ▒▒   ▓▒█░░ ▒▓ ░▒▓░  ██▒▒▒  ▒▒   ▓▒█░
-░ ░▒  ░ ░ ▒ ░▒░ ░  ▒   ▒▒ ░  ░▒ ░ ▒░▓██ ░▒░   ▒   ▒▒ ░
-░  ░  ░   ░  ░░ ░  ░   ▒     ░░   ░ ▒ ▒ ░░    ░   ▒   
-      ░   ░  ░  ░      ░  ░   ░     ░ ░           ░  ░
-                                    ░ ░               `
-					}
-				</pre>
-
-				<div className="f-flex f-flex-direction-horizontal f-horizontal-align-center">
-					<p className="p-left-small p-right-small">storage period</p>
-					<select>
-						{this.state.storageTimeDurations.map((duration, index) => (
-							<option key={index} value={duration}>{duration.humanize()}</option>
-						))}
-					</select>
-				</div>
-
-				<Dropzone onDrop={files => {
-					this.setState({
-						uploadedFiles: this.state.uploadedFiles.concat(files)
-					});
-
-					files.forEach(file => {
-						const formData = new FormData();
-						formData.append("file", file);
-						formData.append("name", file.name);
-						formData.append("storageTime", this.state.storageTime.asMilliseconds());
-
-						this.props.requestProvider({
-							url: urlJoin(process.env.REACT_APP_API_URL, "/upload/"),
-							method: "POST",
-							data: formData,
-							headers: {
-								"Content-Type": "multipart/form-data"
-							},
-							onUploadProgress: progressEvent => {
-								console.log(progressEvent);
-							}
-						})
-							.then(response => {
-								console.log(response);
-							})
-							.catch(error => {
-								console.log(error);
-							});
-					});
-				}}>
-					{({ getRootProps, getInputProps }) => (
-						<section className="dropzone container">
-							<div {...getRootProps()}>
-								<input {...getInputProps()} />
-								<p>Drag'n'drop files here / click to select files</p>
-							</div>
-						</section>
-					)}
-				</Dropzone>
-
-				{this.state.uploadingFiles.length > 0 &&
-					<div className="container">
-						<table className="filesTable">
-							<tbody>
-								{this.state.uploadingFiles.map((file, index) =>
-									<UploadingFileRow key={index} file={file} nameMaxLength={80} />
-								)}
-							</tbody>
-						</table>
-					</div>
-				}
-
-				{this.state.uploadedFiles.length > 0 &&
-					<div className="container">
-						<table className="filesTable">
-							<tbody>
-								{this.state.uploadedFiles.map((file, index) =>
-									<UploadedFileRow key={index} file={file} nameMaxLength={65} />
-								)}
-							</tbody>
-						</table>
-					</div>
-				}
-
-				<div className="footer f-flex f-flex-direction-vertical">
+				<div className="footer f-flex f-flex-direction-vertical f-vertical-align-center">
 					<p>made by <a href="https://telegram.me/lis355">@lis355</a></p>
 					<p>sharya <a href="https://github.com/lis355/sharya">github page</a></p>
 				</div>
