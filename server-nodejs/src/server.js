@@ -4,16 +4,14 @@ import cors from "cors";
 import { apiRouter } from "./routes/api.js";
 import { appRouter } from "./routes/app.js";
 
-export default function createAndRunServer() {
-	const application = express();
-	application.disable("x-powered-by");
-	application.use(cors());
+const application = express();
+application.disable("x-powered-by");
+application.use(cors());
 
-	application.use("/api/", apiRouter);
-	application.use(appRouter);
+application.use("/api/", apiRouter);
+application.use(appRouter);
 
-	const port = Number(process.env.PORT);
-	application.listen(port, () => {
-		console.log(`Server started on http://localhost:${port}`);
-	});
-}
+const port = Number(process.env.PORT);
+application.listen(port, () => {
+	console.log(`Server started on http://localhost:${port}`);
+});

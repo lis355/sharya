@@ -5,6 +5,7 @@
 	"scripts": {},
 	"dependencies": {
 		"cors": "^2.8.5",
+		"dayjs": "^1.11.13",
 		"dotenv-flow": "^4.1.0",
 		"express": "^4.19.2",
 		"filenamify": "^6.0.0",

@@ -1,9 +1,10 @@
-import dayjs from "dayjs";
 import Dropzone from "react-dropzone";
 import React from "react";
 import urlJoin from "url-join";
 
-import { formatBytes, formatName, randomId } from "./tools.js";
+import { formatBytes, formatName } from "./tools/format.js";
+import { randomId } from "./tools/randomId.js";
+import dayjs from "./tools/dayjs.js";
 
 class UploadingFile {
 	constructor({ id, name, size, date, percent }) {
@@ -49,10 +50,10 @@ class UploadedFileRow extends React.Component {
 				<td>{nameString}</td>
 				<td>{sizeString}</td>
 				<td>
-					<button onClick={() => window.navigator.clipboard.writeText(this.props.file.tinyId)}>copy link</button>
+					<button onClick={() => window.navigator.clipboard.writeText(urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId))}>copy link</button>
 				</td>
 				<td>
-					<button>delete</button>
+					<button onClick={this.props.deleteHandler}>delete</button>
 				</td>
 			</tr>
 		);
@@ -98,38 +99,13 @@ class App extends React.Component {
 
 		await this.requestAuth();
 		await this.requestUploadedFiles();
-
-		// const uploadingFile1 = new UploadingFile({ id: randomId(), name: "test.jps", size: 999999, percent: 0 });
-
-		// const uploadingFiles = [
-		// 	uploadingFile1,
-		// 	new UploadingFile({ id: randomId(), name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, percent: 0 })
-		// ];
-
-		// this.setState({
-		// 	uploadingFiles,
-		// 	uploadedFiles: [
-		// 		new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 222, tinyId: "tesy" }),
-		// 		new UploadedFile({ name: "test_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfdstest_fdfds_fdsfds_fdsfds_fdsfds.jps", size: 111222, tinyId: "tesy" })
-		// 	]
-		// });
-
-		// setInterval(() => {
-		// 	const uploadingFiles = this.state.uploadingFiles.map(file => {
-		// 		return file.id === uploadingFile1.id
-		// 			? new UploadingFile({ id: uploadingFile1.id, name: uploadingFile1.name, size: uploadingFile1.size, percent: file.percent + 0.01 })
-		// 			: file;
-		// 	});
-
-		// 	this.setState({ uploadingFiles });
-		// }, 1000);
 	}
 
 	async requestAuth() {
 		this.props.requestProvider.defaults.headers.common[TOKEN_HEADER] = localStorage.getItem(TOKEN_HEADER);
 
 		const authResponse = await this.props.requestProvider({
-			url: urlJoin(process.env.REACT_APP_API_URL, "/auth/"),
+			url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "auth"),
 			method: "GET"
 		});
 
@@ -138,7 +114,7 @@ class App extends React.Component {
 
 	async requestUploadedFiles() {
 		const getUploadedFilesResponse = await this.props.requestProvider({
-			url: urlJoin(process.env.REACT_APP_API_URL, "/uploadedFiles/"),
+			url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "uploadedFiles"),
 			method: "GET"
 		});
 
@@ -197,7 +173,7 @@ class App extends React.Component {
 					formData.append("storageTime", this.state.storageTime.asMilliseconds());
 
 					this.props.requestProvider({
-						url: urlJoin(process.env.REACT_APP_API_URL, "/upload/"),
+						url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "upload"),
 						method: "POST",
 						data: formData,
 						headers: {
@@ -218,11 +194,13 @@ class App extends React.Component {
 
 							this.setState({ uploadingFiles });
 
-							// const uploadedFile = new UploadedFile({ id: randomId(), name: file.name, size: file.size, date: dayjs(), percent: 0 });
+							const uploadedFileData = response.data;
 
-							// const uploadedFiles = this.state.uploadingFiles.concat(uploadingFile);
+							const uploadedFile = new UploadedFile({ tinyId: uploadedFileData.tinyId, name: uploadedFileData.name, size: uploadedFileData.size });
 
-							// this.setState({ uploadedFiles });
+							const uploadedFiles = this.state.uploadedFiles.concat(uploadedFile);
+
+							this.setState({ uploadedFiles });
 						})
 						.catch(error => {
 							const uploadingFiles = this.state.uploadingFiles.filter(file => file.id !== uploadingFile.id);
@@ -267,7 +245,18 @@ class App extends React.Component {
 				<table className="filesTable">
 					<tbody>
 						{this.state.uploadedFiles.map((file, index) =>
-							<UploadedFileRow key={index} file={file} nameMaxLength={65} />
+							<UploadedFileRow key={index} file={file} nameMaxLength={65} deleteHandler={async () => {
+								const tinyId = file.tinyId;
+
+								await this.props.requestProvider({
+									url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "upload", tinyId),
+									method: "DELETE"
+								});
+
+								const uploadedFiles = this.state.uploadedFiles.filter(file => file.tinyId !== tinyId);
+
+								this.setState({ uploadedFiles });
+							}} />
 						)}
 					</tbody>
 				</table>

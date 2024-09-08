@@ -3,4 +3,4 @@
 yarn.*
 
 /client/build
-/server-nodejs/files
+*/.data

@@ -1,5 +1,3 @@
 import "./env.js";
-
-import createAndRunServer from "./server.js";
-
-createAndRunServer();
+import "./db.js";
+import "./server.js";

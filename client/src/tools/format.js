@@ -11,7 +11,3 @@ export function formatName(name, nameMaxLength) {
 		? name.slice(0, nameMaxLength - 3) + "..."
 		: name;
 }
-
-export function randomId() {
-	return Math.round(new Date().valueOf() + Math.random() * 10 ** 12).toString(16);
-}

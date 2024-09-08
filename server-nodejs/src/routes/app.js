@@ -3,33 +3,21 @@ import path from "path";
 import express from "express";
 import filenamify from "filenamify";
 
+import database from "../db.js";
+
 export const appRouter = express.Router();
 
-appRouter.get("/:id/",
+appRouter.get("/:tinyId/",
 	(req, res) => {
-		const fileDirectory = path.join(filesDirectory, req.params.id);
-		if (!fs.existsSync(fileDirectory)) return res.sendStatus(httpStatus.NOT_FOUND);
+		const tinyId = req.params.tinyId;
 
-		const info = fs.readJSONSync(path.join(fileDirectory, FILE_INFO_NAME));
-		const filePath = path.join(fileDirectory, FILE_BASE_NAME);
+		const fileRecord = database
+			.prepare("SELECT * FROM files WHERE tinyId = (?)")
+			.get(tinyId);
 
-		if (!fs.existsSync(filePath)) return res.sendStatus(httpStatus.NOT_FOUND);
+		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
-		return res.download(filePath, filenamify(info.name, { replacement: '_' }));
-	}
-);
-
-appRouter.delete("/:id/",
-	(req, res) => {
-		const fileDirectory = path.join(filesDirectory, req.params.id);
-		if (!fs.existsSync(fileDirectory)) return res.sendStatus(httpStatus.FORBIDDEN);
-
-		const info = fs.readJSONSync(path.join(fileDirectory, FILE_INFO_NAME));
-		if (info.token !== req.headers[HEADER_TOKEN]) return res.sendStatus(httpStatus.FORBIDDEN);
-
-		fs.removeSync(fileDirectory);
-
-		return res.sendStatus(httpStatus.OK);
+		return res.download(fileRecord.path, filenamify(fileRecord.name, { replacement: '_' }));
 	}
 );
 
