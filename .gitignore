@@ -2,5 +2,5 @@
 .env.*
 yarn.*
 
-/client/build
+*/build
 */.data

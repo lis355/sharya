@@ -25,8 +25,8 @@ class UploadingFileRow extends React.Component {
 		return (
 			<tr>
 				<td>{nameString}</td>
-				<td>{sizeString}</td>
-				<td>{percentString}</td>
+				<td className="fit">{sizeString}</td>
+				<td className="fit">{percentString}</td>
 			</tr>
 		);
 	}
@@ -48,11 +48,11 @@ class UploadedFileRow extends React.Component {
 		return (
 			<tr>
 				<td>{nameString}</td>
-				<td>{sizeString}</td>
-				<td>
+				<td className="fit">{sizeString}</td>
+				<td className="fit">
 					<button onClick={() => window.navigator.clipboard.writeText(urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId))}>copy link</button>
 				</td>
-				<td>
+				<td className="fit">
 					<button onClick={this.props.deleteHandler}>delete</button>
 				</td>
 			</tr>
@@ -144,7 +144,7 @@ class App extends React.Component {
 	renderStorageTimeSelector() {
 		return (
 			<div className="f-flex f-flex-direction-horizontal f-horizontal-align-center">
-				<p className="p-left-small p-right-small">storage period</p>
+				<p>storage period</p>
 				<select
 					value={this.state.storageTime}
 					onChange={event => this.setState({ storageTime: dayjs.duration({ milliseconds: event.target.value }) })}

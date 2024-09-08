@@ -1,0 +1,112 @@
+/* flex */
+
+.f-flex {
+	display: flex;
+}
+
+.f-flex-direction-horizontal {
+	flex-direction: row;
+}
+
+.f-flex-direction-vertical {
+	flex-direction: column;
+}
+
+.f-horizontal-align-center {
+	justify-content: center;
+}
+
+.f-vertical-align-center {
+	align-items: center;
+}
+
+/* size */
+
+$size-small: 2.5pt;
+$size-middle: 5pt;
+
+/* custom */
+
+html {
+	font-size: 10pt;
+	font-family: "Courier New", Monospace;
+}
+
+p {
+	margin: $size-middle;
+}
+
+button {
+	margin-top: $size-small;
+	margin-bottom: $size-small;
+	margin-left: $size-small;
+	margin-right: $size-small;
+}
+
+.app {
+	margin: $size-middle;
+}
+
+.footer {
+	position: fixed;
+	bottom: 0;
+
+	margin-bottom: $size-middle;
+
+	p {
+		margin: 0;
+	}
+}
+
+pre {
+	margin-bottom: $size-small;
+
+	width: 300pt;
+
+	user-select: none;
+
+	background: -webkit-linear-gradient(#000, #fff);
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+.container {
+	user-select: none;
+
+	border: 1px black solid;
+	background-color: rgb(248, 248, 248);
+	margin: $size-small;
+	padding: $size-small;
+}
+
+$container-width: 600pt;
+
+.dropzone {
+	div {
+		cursor: pointer;
+
+		width: $container-width;
+
+		padding-top: 50pt;
+		padding-bottom: 50pt;
+	}
+
+	p {
+		text-align: center;
+	}
+}
+
+.filesTable {
+	width: $container-width;
+
+	td {
+		padding: 0;
+
+		white-space: nowrap;
+
+		&.fit {
+			width: 0%;
+			white-space: nowrap;
+		}
+	}
+}
