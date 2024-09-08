@@ -91,6 +91,8 @@ button {
 pre {
 	margin-bottom: 2.5pt;
 
+	width: 300pt;
+
 	user-select: none;
 
 	background: -webkit-linear-gradient(#000, #fff);

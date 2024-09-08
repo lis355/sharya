@@ -3,7 +3,7 @@ import path from "path";
 import express from "express";
 import filenamify from "filenamify";
 
-import database from "../db.js";
+import UploadedFilesDB from "../db/UploadedFilesDB.js";
 
 export const appRouter = express.Router();
 
@@ -11,10 +11,7 @@ appRouter.get("/:tinyId/",
 	(req, res) => {
 		const tinyId = req.params.tinyId;
 
-		const fileRecord = database
-			.prepare("SELECT * FROM files WHERE tinyId = (?)")
-			.get(tinyId);
-
+		const fileRecord = UploadedFilesDB.findRecordByTinyId(tinyId);
 		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
 		return res.download(fileRecord.path, filenamify(fileRecord.name, { replacement: '_' }));

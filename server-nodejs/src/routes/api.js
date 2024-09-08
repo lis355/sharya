@@ -5,9 +5,9 @@ import fs from "fs-extra";
 import httpStatus from "http-status-codes";
 import multer from "multer";
 
-import database from "../db.js";
 import dayjs from "../tools/dayjs.js";
 import TinyId from "../tools/TinyId.js";
+import UploadedFilesDB from "../db/UploadedFilesDB.js";
 
 export const apiRouter = express.Router();
 
@@ -21,10 +21,7 @@ const TINY_ID_FILE_DIRECTORY_MAX_ITERATIONS = 1000;
 function getNextTinyId() {
 	for (let i = 0; i < TINY_ID_FILE_DIRECTORY_MAX_ITERATIONS; i++) {
 		const tinyId = TinyId.generate().toString();
-		const hasTinyId = database
-			.prepare("SELECT tinyId FROM files WHERE tinyId = (?)")
-			.get(tinyId);
-
+		const hasTinyId = Boolean(UploadedFilesDB.findRecordByTinyId(tinyId));
 		if (hasTinyId) continue;
 
 		return tinyId;
@@ -34,7 +31,7 @@ function getNextTinyId() {
 }
 
 function clearObsoleteFiles() {
-	const fileRecords = database.prepare("SELECT * FROM files").all();
+	const fileRecords = UploadedFilesDB.findRecords();
 	const fileRecordsByTinyId = Object.fromEntries(fileRecords.map(fileRecord => [fileRecord.tinyId, fileRecord]));
 
 	const now = dayjs().valueOf();
@@ -48,7 +45,7 @@ function clearObsoleteFiles() {
 		} else if (fileRecord.date + fileRecord.storageTime < now) {
 			removeFile = true;
 
-			database.prepare("DELETE FROM files WHERE tinyId = (?)").run(fileNameAsTinyId);
+			UploadedFilesDB.deleteRecordByTinyId(fileNameAsTinyId);
 		}
 
 		delete fileRecordsByTinyId[fileNameAsTinyId];
@@ -57,7 +54,7 @@ function clearObsoleteFiles() {
 	});
 
 	Object.keys(fileRecordsByTinyId).forEach(tinyId => {
-		database.prepare("DELETE FROM files WHERE tinyId = (?)").run(tinyId);
+		UploadedFilesDB.deleteRecordByTinyId(tinyId);
 	});
 }
 
@@ -100,13 +97,17 @@ apiRouter.post("/upload/",
 		const storageTime = Number(req.body.storageTime);
 		const tinyId = file.tinyId;
 
-		database
-			.prepare("INSERT INTO files (tinyId, name, size, path, userToken, date, storageTime) VALUES (?, ?, ?, ?, ?, ?, ?)")
-			.run(tinyId, file.originalname, file.size, file.filePath, req.headers[HEADER_TOKEN], dayjs().valueOf(), storageTime);
+		UploadedFilesDB.createRecord({
+			tinyId,
+			name: file.originalname,
+			size: file.size,
+			path: file.filePath,
+			userToken: req.headers[HEADER_TOKEN],
+			date: dayjs().valueOf(),
+			storageTime
+		});
 
-		const record = database
-			.prepare("SELECT tinyId, name, size FROM files WHERE tinyId = (?)")
-			.get(tinyId);
+		const record = UploadedFilesDB.findRecordWithTinyIdAndNameAndSizeByTinyId(tinyId);
 
 		return res.status(httpStatus.OK).send(record);
 	}
@@ -116,13 +117,10 @@ apiRouter.delete("/upload/:tinyId/",
 	(req, res) => {
 		const tinyId = req.params.tinyId;
 
-		const fileRecord = database
-			.prepare("SELECT * FROM files WHERE tinyId = (?) AND userToken = (?)")
-			.get(tinyId, req.headers[HEADER_TOKEN]);
-
+		const fileRecord = UploadedFilesDB.findRecordByTinyIdAndUserToken(tinyId, req.headers[HEADER_TOKEN]);
 		if (!fileRecord) return res.sendStatus(httpStatus.FORBIDDEN);
 
-		database.prepare("DELETE FROM files WHERE tinyId = (?)").run(tinyId);
+		UploadedFilesDB.deleteRecordByTinyId(tinyId);
 
 		fs.removeSync(path.join(FILES_DIRECTORY, tinyId));
 
@@ -131,9 +129,7 @@ apiRouter.delete("/upload/:tinyId/",
 );
 
 apiRouter.get("/uploadedFiles/", (req, res) => {
-	const uploadedFileRecords = database
-		.prepare("SELECT tinyId, name, size FROM files WHERE userToken = (?)")
-		.all(req.headers[HEADER_TOKEN]);
+	const uploadedFileRecords = UploadedFilesDB.findRecordsWithTinyIdAndNameAndSizeByUserToken(req.headers[HEADER_TOKEN]);
 
 	return res.status(httpStatus.OK).send(uploadedFileRecords);
 });
