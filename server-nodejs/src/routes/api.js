@@ -16,6 +16,8 @@ const HEADER_TOKEN = "sharya-token";
 const FILES_DIRECTORY = path.join(process.env.DATA, "files");
 const FILE_BASE_NAME = "file.data";
 
+fs.ensureDirSync(FILES_DIRECTORY);
+
 const TINY_ID_FILE_DIRECTORY_MAX_ITERATIONS = 1000;
 
 function getNextTinyId() {
