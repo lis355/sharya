@@ -15,7 +15,7 @@ appRouter.get("/:tinyId/",
 		const fileRecord = UploadedFilesDB.findRecordByTinyId(tinyId);
 		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
-		return res.download(fileRecord.path, filenamify(fileRecord.name, { replacement: '_' }));
+		return res.download(fileRecord.path, filenamify(fileRecord.name, { replacement: "_" }));
 	}
 );
 

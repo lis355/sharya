@@ -12,8 +12,12 @@
 	},
 	"rules": {
 		"semi": [
-			2,
+			"error",
 			"always"
+		],
+		"quotes": [
+			"error",
+			"double"
 		]
 	}
 }

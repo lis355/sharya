@@ -2,6 +2,9 @@
 	"name": "sharya-server",
 	"version": "1.0.0",
 	"type": "module",
+	"engines": {
+		"node": ">=v22.8.0"
+	},
 	"scripts": {},
 	"dependencies": {
 		"cors": "^2.8.5",
