@@ -5,6 +5,7 @@ import fs from "fs-extra";
 import httpStatus from "http-status-codes";
 import multer from "multer";
 
+import { randomHash } from "../tools/hash.js";
 import dayjs from "../tools/dayjs.js";
 import TinyId from "../tools/TinyId.js";
 import UploadedFilesDB from "../db/UploadedFilesDB.js";
