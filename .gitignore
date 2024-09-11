@@ -4,3 +4,5 @@ yarn.*
 
 */build
 */.data
+
+__debug*.exe

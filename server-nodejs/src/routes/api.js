@@ -19,10 +19,10 @@ const FILE_BASE_NAME = "file.data";
 
 fs.ensureDirSync(FILES_DIRECTORY);
 
-const TINY_ID_FILE_DIRECTORY_MAX_ITERATIONS = 1000;
+const TINY_ID_GENERATION_MAX_ITERATIONS = 1000;
 
 function getNextTinyId() {
-	for (let i = 0; i < TINY_ID_FILE_DIRECTORY_MAX_ITERATIONS; i++) {
+	for (let i = 0; i < TINY_ID_GENERATION_MAX_ITERATIONS; i++) {
 		const tinyId = TinyId.generate().toString();
 		const hasTinyId = Boolean(UploadedFilesDB.findRecordByTinyId(tinyId));
 		if (hasTinyId) continue;
@@ -112,7 +112,7 @@ apiRouter.post("/upload/",
 
 		const record = UploadedFilesDB.findRecordWithTinyIdAndNameAndSizeByTinyId(tinyId);
 
-		return res.status(httpStatus.OK).send(record);
+		return res.status(httpStatus.CREATED).send(record);
 	}
 );
 
