@@ -12,20 +12,20 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	dbUploadedFile "sharya-server/db/models"
+	uploadedfile "sharya-server/db/models/uploadedFile"
 	"sharya-server/tools"
 )
 
 func WriteTextResponse(w http.ResponseWriter, text string, statusCode int) {
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(text))
 	w.WriteHeader(statusCode)
+	w.Write([]byte(text))
 }
 
 func WriteJsonResponse(w http.ResponseWriter, v any, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
 	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(v)
 }
 
 func mainRouter() http.Handler {
@@ -42,7 +42,7 @@ func mainRouter() http.Handler {
 	router.Get("/{tinyId}", func(w http.ResponseWriter, r *http.Request) {
 		tinyId := chi.URLParam(r, "tinyId")
 
-		uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyId(tinyId)
+		uploadedFileRecord, _ := uploadedfile.FindRecordByTinyId(tinyId)
 		if uploadedFileRecord == nil {
 			w.WriteHeader(http.StatusNotFound)
 		} else {

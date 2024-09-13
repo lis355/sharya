@@ -1,4 +1,4 @@
-package dbUploadedFile
+package uploadedfile
 
 import (
 	"fmt"

@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
-	dbUploadedFile "sharya-server/db/models"
+	uploadedfiles "sharya-server/components/uploadFiles"
+	uploadedfile "sharya-server/db/models/uploadedFile"
 	"sharya-server/tools"
 )
 
@@ -34,15 +34,11 @@ const fileBaseName = "file.data"
 
 const tinyIdGenerationMaxIterations = 1000
 
-func GetFilesDataDirectory() string {
-	return filepath.Join(tools.GetDataDirectory(), "files")
-}
-
 func getNextTinyId() (string, error) {
 	tinyId := ""
 	for i := 0; i < tinyIdGenerationMaxIterations; i++ {
 		tinyId = tools.GenetareTinyId()
-		if uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyId(tinyId); uploadedFileRecord != nil {
+		if uploadedFileRecord, _ := uploadedfile.FindRecordByTinyId(tinyId); uploadedFileRecord != nil {
 			continue
 		}
 
@@ -85,7 +81,7 @@ func ApiRouter() http.Handler {
 		fileName := r.FormValue("name")
 		fileStorageTime, _ := strconv.Atoi(r.FormValue("storageTime"))
 
-		filePath := filepath.Join(GetFilesDataDirectory(), tinyId, fileBaseName)
+		filePath := filepath.Join(uploadedfiles.GetFilesDataDirectory(), tinyId, fileBaseName)
 
 		os.MkdirAll(filepath.Dir(filePath), os.ModeDir)
 
@@ -96,19 +92,19 @@ func ApiRouter() http.Handler {
 
 		fileInfo, _ := os.Stat(filePath)
 
-		uploadedFile := dbUploadedFile.UploadedFile{
+		uploadedFile := uploadedfile.UploadedFile{
 			TinyId:      tinyId,
 			Name:        fileName,
 			Size:        int(fileInfo.Size()),
 			Path:        filePath,
 			UserToken:   GetUserTokenFromRequest(r),
-			Date:        int(time.Now().Unix()),
+			Date:        tools.Now(),
 			StorageTime: fileStorageTime,
 		}
 
-		dbUploadedFile.CreateRecord(uploadedFile)
+		uploadedfile.CreateRecord(uploadedFile)
 
-		uploadedFileRecord, _ := dbUploadedFile.FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId)
+		uploadedFileRecord, _ := uploadedfile.FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId)
 
 		WriteJsonResponse(w, uploadedFileRecord, http.StatusCreated)
 	})
@@ -116,11 +112,11 @@ func ApiRouter() http.Handler {
 	router.Delete("/upload/{tinyId}", func(w http.ResponseWriter, r *http.Request) {
 		tinyId := chi.URLParam(r, "tinyId")
 
-		uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyIdAndUserToken(tinyId, GetUserTokenFromRequest(r))
+		uploadedFileRecord, _ := uploadedfile.FindRecordByTinyIdAndUserToken(tinyId, GetUserTokenFromRequest(r))
 		if uploadedFileRecord == nil {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
-			dbUploadedFile.DeleteRecordByTinyId(tinyId)
+			uploadedfile.DeleteRecordByTinyId(tinyId)
 
 			os.RemoveAll(filepath.Dir(uploadedFileRecord.Path))
 
@@ -129,7 +125,7 @@ func ApiRouter() http.Handler {
 	})
 
 	router.Get("/uploadedFiles", func(w http.ResponseWriter, r *http.Request) {
-		uploadedFileRecords, _ := dbUploadedFile.FindRecordsWithTinyIdAndNameAndSizeByUserToken(GetUserTokenFromRequest(r))
+		uploadedFileRecords, _ := uploadedfile.FindRecordsWithTinyIdAndNameAndSizeByUserToken(GetUserTokenFromRequest(r))
 
 		WriteJsonResponse(w, uploadedFileRecords, http.StatusOK)
 	})
@@ -140,36 +136,3 @@ func ApiRouter() http.Handler {
 
 	return router
 }
-
-// function clearObsoleteFiles() {
-// 	const fileRecords = UploadedFilesDB.findRecords();
-// 	const fileRecordsByTinyId = Object.fromEntries(fileRecords.map(fileRecord => [fileRecord.tinyId, fileRecord]));
-
-// 	const now = dayjs().valueOf();
-
-// 	fs.readdirSync(FILES_DIRECTORY).forEach(fileNameAsTinyId => {
-// 		const fileRecord = fileRecordsByTinyId[fileNameAsTinyId];
-
-// 		let removeFile = false;
-// 		if (!fileRecord) {
-// 			removeFile = true;
-// 		} else if (fileRecord.date + fileRecord.storageTime < now) {
-// 			removeFile = true;
-
-// 			UploadedFilesDB.deleteRecordByTinyId(fileNameAsTinyId);
-// 		}
-
-// 		delete fileRecordsByTinyId[fileNameAsTinyId];
-
-// 		if (removeFile) fs.removeSync(path.join(FILES_DIRECTORY, fileNameAsTinyId));
-// 	});
-
-// 	Object.keys(fileRecordsByTinyId).forEach(tinyId => {
-// 		UploadedFilesDB.deleteRecordByTinyId(tinyId);
-// 	});
-// }
-
-// const CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION = dayjs.duration({ days: 1 });
-
-// clearObsoleteFiles();
-// setInterval(clearObsoleteFiles, CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION.asMilliseconds());
