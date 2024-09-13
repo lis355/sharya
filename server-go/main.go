@@ -1,9 +1,9 @@
 package main
 
 import (
-	uf "sharya-server/components/uploadFiles"
+	"sharya-server/components/uploadedfiles"
 	"sharya-server/db"
-	uploadedfile "sharya-server/db/models/uploadedFile"
+	uploadedfile "sharya-server/db/models"
 	"sharya-server/server"
 	"sharya-server/tools"
 )
@@ -24,7 +24,7 @@ func main() {
 		// uploadedfile.DebugPrintAllRecords()
 	}
 
-	uf.UploadFilesManager.Initialize()
+	uploadedfiles.UploadFilesManager.Initialize()
 
 	server.StartServer()
 }

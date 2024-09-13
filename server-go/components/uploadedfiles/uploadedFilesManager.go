@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	uploadedfile "sharya-server/db/models/uploadedFile"
+	"sharya-server/db"
+	uploadedfile "sharya-server/db/models"
 	"sharya-server/tools"
 )
 
@@ -17,14 +18,14 @@ var UploadFilesManager = uploadFilesManager{}
 const clearObsoleteFilesInterval = 24 * time.Hour
 
 func GetFilesDataDirectory() string {
-	return filepath.Join(tools.GetDataDirectory(), "files")
+	return filepath.Join(tools.DataDirectory, "files")
 }
 
 func (m *uploadFilesManager) Initialize() {
 	m.clearObsoleteFiles()
 
-	tick := time.Tick(clearObsoleteFilesInterval)
 	go func() {
+		tick := time.Tick(clearObsoleteFilesInterval)
 		for range tick {
 			m.clearObsoleteFiles()
 		}
@@ -34,12 +35,12 @@ func (m *uploadFilesManager) Initialize() {
 func (m *uploadFilesManager) clearObsoleteFiles() {
 	records, _ := uploadedfile.FindRecords()
 
-	recordsMapByTinyId := make(map[string]*uploadedfile.UploadedFile, len(records))
+	recordsMapByTinyId := make(map[string]*db.UploadedFile, len(records))
 	for _, record := range records {
 		recordsMapByTinyId[record.TinyId] = record
 	}
 
-	now := tools.Now()
+	now := tools.UnixNowInt32()
 
 	entries, _ := os.ReadDir(GetFilesDataDirectory())
 	for _, e := range entries {

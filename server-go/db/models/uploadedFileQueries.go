@@ -8,16 +8,6 @@ import (
 	"sharya-server/db"
 )
 
-type UploadedFile struct {
-	TinyId      string `json:"tinyId,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Size        int    `json:"size,omitempty"`
-	Path        string `json:"path,omitempty"`
-	UserToken   string `json:"userToken,omitempty"`
-	Date        int    `json:"date,omitempty"`
-	StorageTime int    `json:"storageTime,omitempty"`
-}
-
 const dbName = "uploadedFiles"
 
 func Clear() error {
@@ -60,7 +50,7 @@ func DebugPrintAllRecords() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
 
 		if err != nil {
@@ -74,7 +64,7 @@ func DebugPrintAllRecords() error {
 	return nil
 }
 
-func CreateRecord(uploadedFile UploadedFile) error {
+func CreateRecord(uploadedFile db.UploadedFile) error {
 	_, err := db.DB.Exec(fmt.Sprintf(`
 		INSERT INTO %[1]s (tinyId, name, size, path, userToken, date, storageTime) VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, dbName), uploadedFile.TinyId, uploadedFile.Name, uploadedFile.Size, uploadedFile.Path, uploadedFile.UserToken, uploadedFile.Date, uploadedFile.StorageTime)
@@ -100,27 +90,27 @@ func DeleteRecordByTinyId(tinyId string) error {
 	return nil
 }
 
-func FindRecords() ([]*UploadedFile, error) {
+func FindRecords() ([]*db.UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
 		SELECT * FROM %[1]s
 	`, dbName))
 
 	if err != nil {
 		fmt.Println(err)
-		return []*UploadedFile{}, err
+		return []*db.UploadedFile{}, err
 	}
 
 	defer rows.Close()
 
-	result := []*UploadedFile{}
+	result := []*db.UploadedFile{}
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
 
 		if err != nil {
 			fmt.Println(err)
-			return []*UploadedFile{}, err
+			return []*db.UploadedFile{}, err
 		}
 
 		result = append(result, &uploadedFile)
@@ -129,7 +119,7 @@ func FindRecords() ([]*UploadedFile, error) {
 	return result, nil
 }
 
-func FindRecordByTinyId(tinyId string) (*UploadedFile, error) {
+func FindRecordByTinyId(tinyId string) (*db.UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
 		SELECT * FROM %[1]s WHERE tinyId = (?) 
 	`, dbName), tinyId)
@@ -142,7 +132,7 @@ func FindRecordByTinyId(tinyId string) (*UploadedFile, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
 
 		if err != nil {
@@ -156,7 +146,7 @@ func FindRecordByTinyId(tinyId string) (*UploadedFile, error) {
 	return nil, nil
 }
 
-func FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId string) (*UploadedFile, error) {
+func FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId string) (*db.UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
 		SELECT tinyId, name, size FROM %[1]s WHERE tinyId = (?)
 	`, dbName), tinyId)
@@ -169,7 +159,7 @@ func FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId string) (*UploadedFile, e
 	defer rows.Close()
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size)
 
 		if err != nil {
@@ -183,27 +173,27 @@ func FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId string) (*UploadedFile, e
 	return nil, nil
 }
 
-func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*UploadedFile, error) {
+func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*db.UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
 		SELECT tinyId, name, size FROM %[1]s WHERE userToken = (?)
 	`, dbName), userToken)
 
 	if err != nil {
 		fmt.Println(err)
-		return []*UploadedFile{}, err
+		return []*db.UploadedFile{}, err
 	}
 
 	defer rows.Close()
 
-	result := []*UploadedFile{}
+	result := []*db.UploadedFile{}
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size)
 
 		if err != nil {
 			fmt.Println(err)
-			return []*UploadedFile{}, err
+			return []*db.UploadedFile{}, err
 		}
 
 		result = append(result, &uploadedFile)
@@ -212,7 +202,7 @@ func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*Upload
 	return result, nil
 }
 
-func FindRecordByTinyIdAndUserToken(tinyId string, userToken string) (*UploadedFile, error) {
+func FindRecordByTinyIdAndUserToken(tinyId string, userToken string) (*db.UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
 		SELECT * FROM %[1]s WHERE tinyId = (?) AND userToken = (?)
 	`, dbName), tinyId, userToken)
@@ -225,7 +215,7 @@ func FindRecordByTinyIdAndUserToken(tinyId string, userToken string) (*UploadedF
 	defer rows.Close()
 
 	for rows.Next() {
-		var uploadedFile UploadedFile
+		var uploadedFile db.UploadedFile
 		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
 
 		if err != nil {

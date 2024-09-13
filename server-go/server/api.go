@@ -11,8 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	uploadedfiles "sharya-server/components/uploadFiles"
-	uploadedfile "sharya-server/db/models/uploadedFile"
+	uploadedfiles "sharya-server/components/uploadedfiles"
+	"sharya-server/db"
+	uploadedfile "sharya-server/db/models"
 	"sharya-server/tools"
 )
 
@@ -92,13 +93,13 @@ func ApiRouter() http.Handler {
 
 		fileInfo, _ := os.Stat(filePath)
 
-		uploadedFile := uploadedfile.UploadedFile{
+		uploadedFile := db.UploadedFile{
 			TinyId:      tinyId,
 			Name:        fileName,
 			Size:        int(fileInfo.Size()),
 			Path:        filePath,
 			UserToken:   GetUserTokenFromRequest(r),
-			Date:        tools.Now(),
+			Date:        tools.UnixNowInt32(),
 			StorageTime: fileStorageTime,
 		}
 

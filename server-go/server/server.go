@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
-	uploadedfile "sharya-server/db/models/uploadedFile"
+	uploadedfile "sharya-server/db/models"
 	"sharya-server/tools"
 )
 

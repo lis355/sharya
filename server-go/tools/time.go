@@ -4,6 +4,6 @@ import (
 	"time"
 )
 
-func Now() int {
+func UnixNowInt32() int {
 	return int(time.Now().Unix() * 1000)
 }
