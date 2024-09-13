@@ -2,17 +2,17 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
-	uploadedFile "sharya-server/db/models"
+	dbUploadedFile "sharya-server/db/models"
 	"sharya-server/tools"
 )
 
@@ -22,17 +22,27 @@ type userToken struct{}
 
 var userTokenKey = userToken{}
 
+func GetContextWithUserToken(r *http.Request, token string) context.Context {
+	return context.WithValue(r.Context(), userTokenKey, token)
+}
+
+func GetUserTokenFromRequest(r *http.Request) string {
+	return r.Context().Value(userTokenKey).(string)
+}
+
 const fileBaseName = "file.data"
 
 const tinyIdGenerationMaxIterations = 1000
 
-var FilesDataDirectory = filepath.Join(tools.DataDirectory, "files")
+func GetFilesDataDirectory() string {
+	return filepath.Join(tools.GetDataDirectory(), "files")
+}
 
 func getNextTinyId() (string, error) {
 	tinyId := ""
 	for i := 0; i < tinyIdGenerationMaxIterations; i++ {
 		tinyId = tools.GenetareTinyId()
-		if uploadedFileRecord, _ := uploadedFile.FindRecordByTinyId(tinyId); uploadedFileRecord != nil {
+		if uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyId(tinyId); uploadedFileRecord != nil {
 			continue
 		}
 
@@ -52,15 +62,14 @@ func ApiRouter() http.Handler {
 				token = tools.RandomHash()
 			}
 
-			ctx := context.WithValue(r.Context(), userTokenKey, token)
+			ctx := GetContextWithUserToken(r, token)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
 
 	router.Get("/auth", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(r.Context().Value(userTokenKey).(string)))
-		w.WriteHeader(http.StatusOK)
+		WriteTextResponse(w, GetUserTokenFromRequest(r), http.StatusOK)
 	})
 
 	router.Post("/upload", func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +85,10 @@ func ApiRouter() http.Handler {
 		fileName := r.FormValue("name")
 		fileStorageTime, _ := strconv.Atoi(r.FormValue("storageTime"))
 
-		filePath := filepath.Join(FilesDataDirectory, tinyId, fileBaseName)
+		filePath := filepath.Join(GetFilesDataDirectory(), tinyId, fileBaseName)
+
+		os.MkdirAll(filepath.Dir(filePath), os.ModeDir)
+
 		dst, _ := os.Create(filePath)
 		defer dst.Close()
 
@@ -84,25 +96,42 @@ func ApiRouter() http.Handler {
 
 		fileInfo, _ := os.Stat(filePath)
 
-		uploadedFile.CreateRecord(uploadedFile.UploadedFile{
+		uploadedFile := dbUploadedFile.UploadedFile{
 			TinyId:      tinyId,
 			Name:        fileName,
 			Size:        int(fileInfo.Size()),
 			Path:        filePath,
-			UserToken:   r.Context().Value(userTokenKey).(string),
-			Date:        int(fileInfo.ModTime().Unix()),
+			UserToken:   GetUserTokenFromRequest(r),
+			Date:        int(time.Now().Unix()),
 			StorageTime: fileStorageTime,
-		})
+		}
 
-		w.WriteHeader(http.StatusCreated)
+		dbUploadedFile.CreateRecord(uploadedFile)
+
+		uploadedFileRecord, _ := dbUploadedFile.FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId)
+
+		WriteJsonResponse(w, uploadedFileRecord, http.StatusCreated)
+	})
+
+	router.Delete("/upload/{tinyId}", func(w http.ResponseWriter, r *http.Request) {
+		tinyId := chi.URLParam(r, "tinyId")
+
+		uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyIdAndUserToken(tinyId, GetUserTokenFromRequest(r))
+		if uploadedFileRecord == nil {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			dbUploadedFile.DeleteRecordByTinyId(tinyId)
+
+			os.RemoveAll(filepath.Dir(uploadedFileRecord.Path))
+
+			w.WriteHeader(http.StatusOK)
+		}
 	})
 
 	router.Get("/uploadedFiles", func(w http.ResponseWriter, r *http.Request) {
-		uploadedFileRecords, _ := uploadedFile.FindRecordsWithTinyIdAndNameAndSizeByUserToken(r.Context().Value(userTokenKey).(string))
+		uploadedFileRecords, _ := dbUploadedFile.FindRecordsWithTinyIdAndNameAndSizeByUserToken(GetUserTokenFromRequest(r))
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(uploadedFileRecords)
-		w.WriteHeader(http.StatusOK)
+		WriteJsonResponse(w, uploadedFileRecords, http.StatusOK)
 	})
 
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
@@ -111,3 +140,36 @@ func ApiRouter() http.Handler {
 
 	return router
 }
+
+// function clearObsoleteFiles() {
+// 	const fileRecords = UploadedFilesDB.findRecords();
+// 	const fileRecordsByTinyId = Object.fromEntries(fileRecords.map(fileRecord => [fileRecord.tinyId, fileRecord]));
+
+// 	const now = dayjs().valueOf();
+
+// 	fs.readdirSync(FILES_DIRECTORY).forEach(fileNameAsTinyId => {
+// 		const fileRecord = fileRecordsByTinyId[fileNameAsTinyId];
+
+// 		let removeFile = false;
+// 		if (!fileRecord) {
+// 			removeFile = true;
+// 		} else if (fileRecord.date + fileRecord.storageTime < now) {
+// 			removeFile = true;
+
+// 			UploadedFilesDB.deleteRecordByTinyId(fileNameAsTinyId);
+// 		}
+
+// 		delete fileRecordsByTinyId[fileNameAsTinyId];
+
+// 		if (removeFile) fs.removeSync(path.join(FILES_DIRECTORY, fileNameAsTinyId));
+// 	});
+
+// 	Object.keys(fileRecordsByTinyId).forEach(tinyId => {
+// 		UploadedFilesDB.deleteRecordByTinyId(tinyId);
+// 	});
+// }
+
+// const CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION = dayjs.duration({ days: 1 });
+
+// clearObsoleteFiles();
+// setInterval(clearObsoleteFiles, CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION.asMilliseconds());

@@ -121,7 +121,7 @@ apiRouter.delete("/upload/:tinyId/",
 		const tinyId = req.params.tinyId;
 
 		const fileRecord = UploadedFilesDB.findRecordByTinyIdAndUserToken(tinyId, req.headers[HEADER_TOKEN]);
-		if (!fileRecord) return res.sendStatus(httpStatus.FORBIDDEN);
+		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
 		UploadedFilesDB.deleteRecordByTinyId(tinyId);
 

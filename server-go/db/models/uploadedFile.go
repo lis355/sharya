@@ -1,21 +1,21 @@
-package uploadedFile
+package dbUploadedFile
 
 import (
 	"fmt"
 
-	"sharya-server/db"
-
 	_ "github.com/mattn/go-sqlite3"
+
+	"sharya-server/db"
 )
 
 type UploadedFile struct {
-	TinyId      string `json:"tinyId"`
-	Name        string `json:"name"`
-	Size        int    `json:"size"`
-	Path        string `json:"path"`
-	UserToken   string `json:"userToken"`
-	Date        int    `json:"date"`
-	StorageTime int    `json:"storageTime"`
+	TinyId      string `json:"tinyId,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Size        int    `json:"size,omitempty"`
+	Path        string `json:"path,omitempty"`
+	UserToken   string `json:"userToken,omitempty"`
+	Date        int    `json:"date,omitempty"`
+	StorageTime int    `json:"storageTime,omitempty"`
 }
 
 const dbName = "uploadedFiles"
@@ -87,48 +87,23 @@ func CreateRecord(uploadedFile UploadedFile) error {
 	return nil
 }
 
-// static deleteRecordByTinyId(tinyId) {
-// 	database
-// 		.prepare(`DELETE FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?)`)
-// 		.run(tinyId);
-// }
-
-// static findRecords() {
-// 	return database
-// 		.prepare(`SELECT * FROM ${DB_NAME}`)
-// 		.all();
-// }
-
-func FindRecordByTinyId(tinyId string) (*UploadedFile, error) {
-	row := db.DB.QueryRow(fmt.Sprintf(`
-		SELECT * FROM %[1]s WHERE tinyId = (?) 
+func DeleteRecordByTinyId(tinyId string) error {
+	_, err := db.DB.Exec(fmt.Sprintf(`
+		DELETE FROM %[1]s WHERE tinyId = (?) 
 	`, dbName), tinyId)
-
-	if row == nil {
-		return nil, nil
-	}
-
-	var uploadedFile UploadedFile
-	err := row.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
 
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return err
 	}
 
-	return &uploadedFile, nil
+	return nil
 }
 
-// static findRecordWithTinyIdAndNameAndSizeByTinyId(tinyId) {
-// 	return database
-// 		.prepare(`SELECT ${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE} FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?)`)
-// 		.get(tinyId);
-// }
-
-func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*UploadedFile, error) {
+func FindRecords() ([]*UploadedFile, error) {
 	rows, err := db.DB.Query(fmt.Sprintf(`
-		SELECT tinyId, name, size FROM %[1]s WHERE userToken = (?)
-	`, dbName), userToken)
+		SELECT * FROM %[1]s
+	`, dbName))
 
 	if err != nil {
 		fmt.Println(err)
@@ -154,8 +129,112 @@ func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*Upload
 	return result, nil
 }
 
-// static findRecordByTinyIdAndUserToken(tinyId, userToken) {
-// 	return database
-// 		.prepare(`SELECT * FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?) AND ${FIELD_USER_TOKEN} = (?)`)
-// 		.get(tinyId, userToken);
-// }
+func FindRecordByTinyId(tinyId string) (*UploadedFile, error) {
+	rows, err := db.DB.Query(fmt.Sprintf(`
+		SELECT * FROM %[1]s WHERE tinyId = (?) 
+	`, dbName), tinyId)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var uploadedFile UploadedFile
+		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
+
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		} else {
+			return &uploadedFile, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func FindRecordWithTinyIdAndNameAndSizeByTinyId(tinyId string) (*UploadedFile, error) {
+	rows, err := db.DB.Query(fmt.Sprintf(`
+		SELECT tinyId, name, size FROM %[1]s WHERE tinyId = (?)
+	`, dbName), tinyId)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var uploadedFile UploadedFile
+		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size)
+
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		} else {
+			return &uploadedFile, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func FindRecordsWithTinyIdAndNameAndSizeByUserToken(userToken string) ([]*UploadedFile, error) {
+	rows, err := db.DB.Query(fmt.Sprintf(`
+		SELECT tinyId, name, size FROM %[1]s WHERE userToken = (?)
+	`, dbName), userToken)
+
+	if err != nil {
+		fmt.Println(err)
+		return []*UploadedFile{}, err
+	}
+
+	defer rows.Close()
+
+	result := []*UploadedFile{}
+
+	for rows.Next() {
+		var uploadedFile UploadedFile
+		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size)
+
+		if err != nil {
+			fmt.Println(err)
+			return []*UploadedFile{}, err
+		}
+
+		result = append(result, &uploadedFile)
+	}
+
+	return result, nil
+}
+
+func FindRecordByTinyIdAndUserToken(tinyId string, userToken string) (*UploadedFile, error) {
+	rows, err := db.DB.Query(fmt.Sprintf(`
+		SELECT * FROM %[1]s WHERE tinyId = (?) AND userToken = (?)
+	`, dbName), tinyId, userToken)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var uploadedFile UploadedFile
+		err := rows.Scan(&uploadedFile.TinyId, &uploadedFile.Name, &uploadedFile.Size, &uploadedFile.Path, &uploadedFile.UserToken, &uploadedFile.Date, &uploadedFile.StorageTime)
+
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		} else {
+			return &uploadedFile, nil
+		}
+	}
+
+	return nil, nil
+}

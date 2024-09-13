@@ -5,9 +5,12 @@ import (
 	"path/filepath"
 )
 
-var DataDirectory string
+var dataDirectory, _ = filepath.Abs(".data")
+
+func GetDataDirectory() string {
+	return dataDirectory
+}
 
 func InitializeDataDirectory() {
-	DataDirectory, _ = filepath.Abs(".data")
-	os.Mkdir(DataDirectory, os.ModeDir)
+	os.Mkdir(GetDataDirectory(), os.ModeDir)
 }

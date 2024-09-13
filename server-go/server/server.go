@@ -1,17 +1,32 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"sharya-server/tools"
-
+	"github.com/flytam/filenamify"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	dbUploadedFile "sharya-server/db/models"
+	"sharya-server/tools"
 )
+
+func WriteTextResponse(w http.ResponseWriter, text string, statusCode int) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(text))
+	w.WriteHeader(statusCode)
+}
+
+func WriteJsonResponse(w http.ResponseWriter, v any, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(v)
+	w.WriteHeader(statusCode)
+}
 
 func mainRouter() http.Handler {
 	router := chi.NewRouter()
@@ -24,9 +39,23 @@ func mainRouter() http.Handler {
 
 	router.Mount("/api", ApiRouter())
 
+	router.Get("/{tinyId}", func(w http.ResponseWriter, r *http.Request) {
+		tinyId := chi.URLParam(r, "tinyId")
+
+		uploadedFileRecord, _ := dbUploadedFile.FindRecordByTinyId(tinyId)
+		if uploadedFileRecord == nil {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			fileName, _ := filenamify.Filenamify(uploadedFileRecord.Name, filenamify.Options{Replacement: "_"})
+
+			w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
+
+			http.ServeFile(w, r, uploadedFileRecord.Path)
+		}
+	})
+
 	homePageDirectory, _ := filepath.Abs(os.Getenv("HOME_PAGE_DIRECTORY"))
 	fs := http.FileServer(http.Dir(homePageDirectory))
-	// router.Handle("/static/*", http.StripPrefix("/static/", fs))
 	router.Handle("/*", fs)
 
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {

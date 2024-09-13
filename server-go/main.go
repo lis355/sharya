@@ -7,25 +7,21 @@ import (
 	"sharya-server/tools"
 )
 
-var DataDirectory string
-
 func main() {
 	tools.InitializeEnvironment()
 	tools.InitializeDataDirectory()
 
 	db.OpenDB()
-	// uploadedFile.Clear()
+
+	if tools.IsDevelopment {
+		// uploadedFile.Clear()
+	}
+
 	uploadedFile.Initialize()
-	// uploadedFile.DebugPrintAllRecords()
-	// uploadedFile.CreateRecord(uploadedFile.UploadedFile{
-	// 	TinyId:      "test",
-	// 	Name:        "test",
-	// 	Size:        1,
-	// 	Path:        "test",
-	// 	UserToken:   "test",
-	// 	Date:        1,
-	// 	StorageTime: 1,
-	// })
+
+	if tools.IsDevelopment {
+		uploadedFile.DebugPrintAllRecords()
+	}
 
 	server.StartServer()
 }
