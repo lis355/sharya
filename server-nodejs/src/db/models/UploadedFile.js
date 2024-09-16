@@ -1,5 +1,3 @@
-import database from "./connection.js";
-
 const DB_NAME = "uploadedFiles";
 
 const FIELD_TINY_ID = "tinyId";
@@ -14,13 +12,17 @@ const INDEX_TINY_ID = "tinyIdIndex";
 const INDEX_USER_TOKEN = "userTokenIndex";
 const INDEX_DATE = "dateIndex";
 
-export default class UploadedFilesDB {
-	static drop() {
-		database.exec(`DROP TABLE ${DB_NAME};`);
+export default class UploadedFile {
+	constructor(database) {
+		this.database = database;
 	}
 
-	static initialize() {
-		database.exec(`
+	drop() {
+		this.database.exec(`DROP TABLE ${DB_NAME};`);
+	}
+
+	initialize() {
+		this.database.exec(`
 			CREATE TABLE IF NOT EXISTS ${DB_NAME} (
 				${FIELD_TINY_ID} TEXT PRIMARY KEY,
 				${FIELD_NAME} TEXT,
@@ -35,50 +37,46 @@ export default class UploadedFilesDB {
 			CREATE INDEX IF NOT EXISTS ${INDEX_USER_TOKEN} ON ${DB_NAME} (${FIELD_USER_TOKEN});
 			CREATE INDEX IF NOT EXISTS ${INDEX_DATE} ON ${DB_NAME} (${FIELD_DATE});
 		`);
+
+		console.log(`[DB]: ${DB_NAME} rows amount:`, this.database.prepare(`SELECT COUNT(*) as amount FROM ${DB_NAME}`).get().amount);
 	}
 
-	static debugPrintAllRecords() {
-		console.log(JSON.stringify(database.prepare(`SELECT * FROM ${DB_NAME}`).all(), null, 2));
+	debugPrintAllRecords() {
+		console.log(JSON.stringify(this.database.prepare(`SELECT * FROM ${DB_NAME}`).all(), null, 2));
 	}
 
-	static createRecord({ tinyId, name, size, path, userToken, date, storageTime }) {
-		database
-			.prepare(`INSERT INTO ${DB_NAME} (${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE}, ${FIELD_PATH}, ${FIELD_USER_TOKEN}, ${FIELD_DATE}, ${FIELD_STORAGE_TIME}) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-			.run(tinyId, name, size, path, userToken, date, storageTime);
+	createRecord({ tinyId, name, size, path, userToken, date, storageTime }) {
+		return this.database
+			.prepare(`INSERT INTO ${DB_NAME} (${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE}, ${FIELD_PATH}, ${FIELD_USER_TOKEN}, ${FIELD_DATE}, ${FIELD_STORAGE_TIME}) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+			.get(tinyId, name, size, path, userToken, date, storageTime);
 	}
 
-	static deleteRecordByTinyId(tinyId) {
-		database
+	deleteRecordByTinyId(tinyId) {
+		this.database
 			.prepare(`DELETE FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?)`)
 			.run(tinyId);
 	}
 
-	static findRecords() {
-		return database
+	findRecords() {
+		return this.database
 			.prepare(`SELECT * FROM ${DB_NAME}`)
 			.all();
 	}
 
-	static findRecordByTinyId(tinyId) {
-		return database
+	findRecordByTinyId(tinyId) {
+		return this.database
 			.prepare(`SELECT * FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?)`)
 			.get(tinyId);
 	}
 
-	static findRecordWithTinyIdAndNameAndSizeByTinyId(tinyId) {
-		return database
-			.prepare(`SELECT ${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE} FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?)`)
-			.get(tinyId);
-	}
-
-	static findRecordsWithTinyIdAndNameAndSizeByUserToken(userToken) {
-		return database
-			.prepare(`SELECT ${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE} FROM ${DB_NAME} WHERE ${FIELD_USER_TOKEN} = (?)`)
+	findRecordsByUserToken(userToken) {
+		return this.database
+			.prepare(`SELECT * FROM ${DB_NAME} WHERE ${FIELD_USER_TOKEN} = (?)`)
 			.all(userToken);
 	}
 
-	static findRecordByTinyIdAndUserToken(tinyId, userToken) {
-		return database
+	findRecordByTinyIdAndUserToken(tinyId, userToken) {
+		return this.database
 			.prepare(`SELECT * FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?) AND ${FIELD_USER_TOKEN} = (?)`)
 			.get(tinyId, userToken);
 	}

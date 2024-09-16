@@ -1,3 +1,3 @@
 import "./env.js";
-import "./db/db.js";
+import "./db/index.js";
 import "./server.js";

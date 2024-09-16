@@ -4,7 +4,7 @@ import express from "express";
 import filenamify from "filenamify";
 import httpStatus from "http-status-codes";
 
-import UploadedFilesDB from "../db/UploadedFilesDB.js";
+import db from "../db/index.js";
 
 export const appRouter = express.Router();
 
@@ -12,10 +12,10 @@ appRouter.get("/:tinyId/",
 	(req, res) => {
 		const tinyId = req.params.tinyId;
 
-		const fileRecord = UploadedFilesDB.findRecordByTinyId(tinyId);
-		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
+		const uploadedFileRecord = db.uploadedFile.findRecordByTinyId(tinyId);
+		if (!uploadedFileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
-		return res.download(fileRecord.path, filenamify(fileRecord.name, { replacement: "_" }));
+		return res.download(uploadedFileRecord.path, filenamify(uploadedFileRecord.name, { replacement: "_" }));
 	}
 );
 

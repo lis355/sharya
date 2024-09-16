@@ -13,5 +13,5 @@ application.use(appRouter);
 
 const port = Number(process.env.PORT);
 application.listen(port, () => {
-	console.log(`Server started on http://localhost:${port}`);
+	console.log(`[SERVER]: HTTP server started on http://localhost:${port}`);
 });
