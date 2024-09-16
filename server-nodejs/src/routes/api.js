@@ -7,8 +7,8 @@ import multer from "multer";
 
 import { randomHash } from "../tools/hash.js";
 import dayjs from "../tools/dayjs.js";
+import db from "../db/index.js";
 import TinyId from "../tools/TinyId.js";
-import UploadedFilesDB from "../db/UploadedFilesDB.js";
 
 export const apiRouter = express.Router();
 
@@ -24,7 +24,7 @@ const TINY_ID_GENERATION_MAX_ITERATIONS = 1000;
 function getNextTinyId() {
 	for (let i = 0; i < TINY_ID_GENERATION_MAX_ITERATIONS; i++) {
 		const tinyId = TinyId.generate().toString();
-		const hasTinyId = Boolean(UploadedFilesDB.findRecordByTinyId(tinyId));
+		const hasTinyId = Boolean(db.uploadedFile.findRecordByTinyId(tinyId));
 		if (hasTinyId) continue;
 
 		return tinyId;
@@ -34,13 +34,13 @@ function getNextTinyId() {
 }
 
 function clearObsoleteFiles() {
-	const fileRecords = UploadedFilesDB.findRecords();
-	const fileRecordsByTinyId = Object.fromEntries(fileRecords.map(fileRecord => [fileRecord.tinyId, fileRecord]));
+	const uploadedFileRecords = db.uploadedFile.findRecords();
+	const uploadedFileRecordsByTinyId = Object.fromEntries(uploadedFileRecords.map(fileRecord => [fileRecord.tinyId, fileRecord]));
 
 	const now = dayjs().valueOf();
 
 	fs.readdirSync(FILES_DIRECTORY).forEach(fileNameAsTinyId => {
-		const fileRecord = fileRecordsByTinyId[fileNameAsTinyId];
+		const fileRecord = uploadedFileRecordsByTinyId[fileNameAsTinyId];
 
 		let removeFile = false;
 		if (!fileRecord) {
@@ -48,16 +48,16 @@ function clearObsoleteFiles() {
 		} else if (fileRecord.date + fileRecord.storageTime < now) {
 			removeFile = true;
 
-			UploadedFilesDB.deleteRecordByTinyId(fileNameAsTinyId);
+			db.uploadedFile.deleteRecordByTinyId(fileNameAsTinyId);
 		}
 
-		delete fileRecordsByTinyId[fileNameAsTinyId];
+		delete uploadedFileRecordsByTinyId[fileNameAsTinyId];
 
 		if (removeFile) fs.removeSync(path.join(FILES_DIRECTORY, fileNameAsTinyId));
 	});
 
-	Object.keys(fileRecordsByTinyId).forEach(tinyId => {
-		UploadedFilesDB.deleteRecordByTinyId(tinyId);
+	Object.keys(uploadedFileRecordsByTinyId).forEach(tinyId => {
+		db.uploadedFile.deleteRecordByTinyId(tinyId);
 	});
 }
 
@@ -65,6 +65,14 @@ const CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION = dayjs.duration({ days: 1 });
 
 clearObsoleteFiles();
 setInterval(clearObsoleteFiles, CLEAR_OBSOLETE_FILES_TIMEOUT_DURATION.asMilliseconds());
+
+function clampDbUploadedFileRecordWithTinyIdAndNameAndSize(record) {
+	return {
+		tinyId: record.tinyId,
+		name: record.name,
+		size: record.size
+	};
+}
 
 apiRouter.use((req, res, next) => {
 	const token = req.headers[HEADER_TOKEN];
@@ -96,23 +104,19 @@ apiRouter.post("/upload/",
 		})
 	}).single("file"),
 	(req, res) => {
-		const file = req.file;
-		const storageTime = Number(req.body.storageTime);
-		const tinyId = file.tinyId;
+		const { file, body } = req;
 
-		UploadedFilesDB.createRecord({
-			tinyId,
-			name: file.originalname,
+		const uploadedFileRecord = db.uploadedFile.createRecord({
+			tinyId: file.tinyId,
+			name: body.name,
 			size: file.size,
 			path: file.filePath,
 			userToken: req.headers[HEADER_TOKEN],
 			date: dayjs().valueOf(),
-			storageTime
+			storageTime: Number(body.storageTime)
 		});
 
-		const record = UploadedFilesDB.findRecordWithTinyIdAndNameAndSizeByTinyId(tinyId);
-
-		return res.status(httpStatus.CREATED).send(record);
+		return res.status(httpStatus.CREATED).send(clampDbUploadedFileRecordWithTinyIdAndNameAndSize(uploadedFileRecord));
 	}
 );
 
@@ -120,10 +124,10 @@ apiRouter.delete("/upload/:tinyId/",
 	(req, res) => {
 		const tinyId = req.params.tinyId;
 
-		const fileRecord = UploadedFilesDB.findRecordByTinyIdAndUserToken(tinyId, req.headers[HEADER_TOKEN]);
-		if (!fileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
+		const uploadedFileRecord = db.uploadedFile.findRecordByTinyIdAndUserToken(tinyId, req.headers[HEADER_TOKEN]);
+		if (!uploadedFileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
-		UploadedFilesDB.deleteRecordByTinyId(tinyId);
+		db.uploadedFile.deleteRecordByTinyId(tinyId);
 
 		fs.removeSync(path.join(FILES_DIRECTORY, tinyId));
 
@@ -132,7 +136,7 @@ apiRouter.delete("/upload/:tinyId/",
 );
 
 apiRouter.get("/uploadedFiles/", (req, res) => {
-	const uploadedFileRecords = UploadedFilesDB.findRecordsWithTinyIdAndNameAndSizeByUserToken(req.headers[HEADER_TOKEN]);
+	const uploadedFileRecords = db.uploadedFile.findRecordsByUserToken(req.headers[HEADER_TOKEN]);
 
-	return res.status(httpStatus.OK).send(uploadedFileRecords);
+	return res.status(httpStatus.OK).send(uploadedFileRecords.map(clampDbUploadedFileRecordWithTinyIdAndNameAndSize));
 });
