@@ -269,25 +269,36 @@ class App extends React.Component {
 	renderUploadedFiles() {
 		return (
 			this.state.uploadedFiles.length > 0 &&
-			<div className="container">
-				<table className="filesTable">
-					<tbody>
-						{this.state.uploadedFiles.map((file, index) =>
-							<UploadedFileRow key={index} file={file} nameMaxLength={65} deleteHandler={async () => {
-								const tinyId = file.tinyId;
+			<div className="container" style={{ marginTop: 0 }}>
+				<div style={{ margin: "0.5rem" }}>
+					<table className="filesTable">
+						<tbody>
+							{this.state.uploadedFiles.map((file, index) =>
+								<UploadedFileRow key={index} file={file} nameMaxLength={65} deleteHandler={async () => {
+									const tinyId = file.tinyId;
 
-								await this.props.requestProvider({
-									url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "upload", tinyId),
-									method: "DELETE"
-								});
+									await this.props.requestProvider({
+										url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "upload", tinyId),
+										method: "DELETE"
+									});
 
-								const uploadedFiles = this.state.uploadedFiles.filter(file => file.tinyId !== tinyId);
+									const uploadedFiles = this.state.uploadedFiles.filter(file => file.tinyId !== tinyId);
 
-								this.setState({ uploadedFiles });
-							}} />
-						)}
-					</tbody>
-				</table>
+									this.setState({ uploadedFiles });
+								}} />
+							)}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		);
+	}
+
+	renderFooter() {
+		return (
+			<div className="footer">
+				<p>created by <a href="https://telegram.me/lis355" target="_blank" rel="noopener noreferrer">@lis355</a></p>
+				<p>sharya <a href="https://github.com/lis355/sharya" target="_blank" rel="noopener noreferrer">github page</a></p>
 			</div>
 		);
 	}
@@ -300,11 +311,7 @@ class App extends React.Component {
 				{this.renderDropzone()}
 				{this.renderUploadingFiles()}
 				{this.renderUploadedFiles()}
-
-				<div className="footer f-flex f-flex-direction-vertical f-vertical-align-center">
-					<p>made by <a href="https://telegram.me/lis355" target="_blank" rel="noopener noreferrer">@lis355</a></p>
-					<p>sharya <a href="https://github.com/lis355/sharya" target="_blank" rel="noopener noreferrer">github page</a></p>
-				</div>
+				{this.renderFooter()}
 			</div>
 		);
 	}
