@@ -27,13 +27,18 @@ $size-middle: 5pt;
 
 /* custom */
 
+#root {
+	height: 100vh;
+	width: 100vw;
+}
+
 html {
 	font-size: 10pt;
 	font-family: "Courier New", Monospace;
 }
 
 p {
-	margin: $size-middle;
+	margin: 0;
 }
 
 button {
@@ -44,7 +49,8 @@ button {
 }
 
 .app {
-	margin: $size-middle;
+	margin: auto;
+	padding: $size-middle;
 }
 
 .footer {
@@ -58,7 +64,7 @@ button {
 	}
 }
 
-pre {
+.logo {
 	margin-bottom: $size-small;
 
 	width: 300pt;
@@ -79,13 +85,10 @@ pre {
 	padding: $size-small;
 }
 
-$container-width: 600pt;
 
 .dropzone {
 	div {
 		cursor: pointer;
-
-		width: $container-width;
 
 		padding-top: 50pt;
 		padding-bottom: 50pt;
@@ -97,8 +100,6 @@ $container-width: 600pt;
 }
 
 .filesTable {
-	width: $container-width;
-
 	td {
 		padding: 0;
 
@@ -108,5 +109,25 @@ $container-width: 600pt;
 			width: 0%;
 			white-space: nowrap;
 		}
+	}
+}
+
+.mr {
+	margin-right: 0.5rem;
+}
+
+@media screen and (max-width: 600pt) {}
+
+@media screen and (min-width: 600pt) {
+	$container-width: 600pt;
+
+	.dropzone {
+		div {
+			width: $container-width;
+		}
+	}
+
+	.filesTable {
+		width: $container-width;
 	}
 }

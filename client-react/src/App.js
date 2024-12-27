@@ -25,7 +25,7 @@ class UploadingFileRow extends React.Component {
 		return (
 			<tr>
 				<td>{nameString}</td>
-				<td className="fit">{sizeString}</td>
+				<td className="fit" style={{ textAlign: "right" }}>{sizeString}</td>
 				<td className="fit">{percentString}</td>
 			</tr>
 		);
@@ -33,10 +33,13 @@ class UploadingFileRow extends React.Component {
 }
 
 class UploadedFile {
-	constructor({ tinyId, name, size, }) {
+	constructor({ tinyId, name, size, date, storageTime, downloadsAmount, isSingleDownload }) {
 		this.tinyId = tinyId;
 		this.name = name;
 		this.size = size;
+		this.expireDate = dayjs(date + storageTime);
+		this.downloadsAmount = downloadsAmount;
+		this.isSingleDownload = isSingleDownload;
 	}
 }
 
@@ -44,13 +47,21 @@ class UploadedFileRow extends React.Component {
 	render() {
 		const nameString = formatName(this.props.file.name, this.props.nameMaxLength);
 		const sizeString = `[${formatBytes(this.props.file.size)}]`;
+		const url = urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId);
 
 		return (
 			<tr>
-				<td>{nameString}</td>
-				<td className="fit">{sizeString}</td>
+				<td>
+					<div className="d-flex f-flex-direction-vertical">
+						<p style={{ marginTop: "0.25rem" }}>{nameString}</p>
+						<p style={{ fontSize: "0.8rem", marginBottom: "0.25rem" }}>
+							<a href={url} target="_blank" rel="noopener noreferrer">{url}</a> | ~{dayjs.duration(this.props.file.expireDate - dayjs()).humanize()} remain | {this.props.file.isSingleDownload ? "single download" : `${this.props.file.downloadsAmount} downloads`}
+						</p>
+					</div>
+				</td>
+				<td className="fit" style={{ textAlign: "right" }}>{sizeString}</td>
 				<td className="fit">
-					<button onClick={() => window.navigator.clipboard.writeText(urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId))}>copy link</button>
+					<button onClick={() => window.navigator.clipboard.writeText(url)}>copy link</button>
 				</td>
 				<td className="fit">
 					<button onClick={this.props.deleteHandler}>delete</button>
@@ -60,9 +71,6 @@ class UploadedFileRow extends React.Component {
 	}
 }
 
-const TOKEN_HEADER = "sharya-token";
-const RENDER_UPLOADING_FILES_AFTER_DURATION = dayjs.duration({ seconds: 0.5 });
-
 // NOTE why componentdidmount called two times
 // https://stackoverflow.com/questions/63383473/why-componentdidmount-called-two-times
 // Multiple componentDidMount calls may be caused by using <React.StrictMode> around your component. After removing it double calls are gone.
@@ -70,20 +78,26 @@ const RENDER_UPLOADING_FILES_AFTER_DURATION = dayjs.duration({ seconds: 0.5 });
 // It happens only in development environment, while in production componentDidMount is called only once even with <React.StrictMode>.
 let appMounted = false;
 
+const TOKEN_HEADER = "sharya-token";
+
+const RENDER_UPLOADING_FILES_AFTER_DURATION = dayjs.duration({ seconds: 0.5 });
+
+const STORAGE_TIMES = [
+	dayjs.duration({ days: 1 }),
+	dayjs.duration({ days: 3 }),
+	dayjs.duration({ days: 7 }),
+	dayjs.duration({ days: 30 })
+];
+
+const STORAGE_TIME_DEFAULT = STORAGE_TIMES[1];
+
 class App extends React.Component {
 	constructor(props) {
 		super(props);
 
-		const storageTimeDurations = [
-			dayjs.duration({ days: 1 }),
-			dayjs.duration({ days: 3 }),
-			dayjs.duration({ days: 7 }),
-			dayjs.duration({ days: 30 })
-		];
-
 		this.state = {
-			storageTimeDurations,
-			storageTime: storageTimeDurations[1],
+			storageTime: STORAGE_TIME_DEFAULT,
+			isSingleDownload: false,
 			uploadingFiles: [],
 			uploadedFiles: []
 		};
@@ -118,14 +132,14 @@ class App extends React.Component {
 			method: "GET"
 		});
 
-		const uploadedFiles = getUploadedFilesResponse.data.map(file => new UploadedFile({ tinyId: file.tinyId, name: file.name, size: file.size }));
+		const uploadedFiles = getUploadedFilesResponse.data.map(file => new UploadedFile(file));
 
 		this.setState({ uploadedFiles });
 	}
 
 	renderLogo() {
 		return (
-			<pre>
+			<pre className="logo">
 				{`  ██████  ██░ ██  ▄▄▄       ██▀███ ▓██   ██▓ ▄▄▄      
 ▒██    ▒ ▓██░ ██▒▒████▄    ▓██ ▒ ██▒▒██  ██▒▒████▄    
 ░ ▓██▄   ▒██▀▀██░▒██  ▀█▄  ▓██ ░▄█ ▒ ▒██ ██░▒██  ▀█▄  
@@ -143,16 +157,21 @@ class App extends React.Component {
 
 	renderStorageTimeSelector() {
 		return (
-			<div className="f-flex f-flex-direction-horizontal f-horizontal-align-center">
-				<p>storage period</p>
-				<select
+			<div className="f-flex f-flex-direction-horizontal f-vertical-align-center">
+				<p className="mr">storage period</p>
+				<select className="mr"
 					value={this.state.storageTime}
-					onChange={event => this.setState({ storageTime: dayjs.duration({ milliseconds: event.target.value }) })}
+					onChange={event => this.setState({ storageTime: event.target.value })}
 				>
-					{this.state.storageTimeDurations.map((duration, index) => (
-						<option key={index} value={duration.asMilliseconds()}>{duration.humanize()}</option>
+					{STORAGE_TIMES.map((duration, index) => (
+						<option key={index} value={duration}>{duration.humanize()}</option>
 					))}
 				</select>
+				<p className="mr">single download</p>
+				<input type="checkbox"
+					checked={this.state.isSingleDownload}
+					onChange={event => this.setState({ isSingleDownload: event.target.checked })}
+				/>
 			</div>
 		);
 	}
@@ -171,6 +190,7 @@ class App extends React.Component {
 					formData.append("file", file);
 					formData.append("name", file.name);
 					formData.append("storageTime", this.state.storageTime.asMilliseconds());
+					formData.append("isSingleDownload", this.state.isSingleDownload);
 
 					this.props.requestProvider({
 						url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "upload"),
@@ -196,16 +216,24 @@ class App extends React.Component {
 
 							const uploadedFileData = response.data;
 
-							const uploadedFile = new UploadedFile({ tinyId: uploadedFileData.tinyId, name: uploadedFileData.name, size: uploadedFileData.size });
+							const uploadedFile = new UploadedFile(uploadedFileData);
 
 							const uploadedFiles = this.state.uploadedFiles.concat(uploadedFile);
 
-							this.setState({ uploadedFiles });
+							this.setState({
+								uploadedFiles,
+								isSingleDownload: false
+							});
 						})
 						.catch(error => {
+							console.log(error);
+
 							const uploadingFiles = this.state.uploadingFiles.filter(file => file.id !== uploadingFile.id);
 
-							this.setState({ uploadingFiles });
+							this.setState({
+								uploadingFiles,
+								isSingleDownload: false
+							});
 						});
 				});
 			}}>
@@ -274,8 +302,8 @@ class App extends React.Component {
 				{this.renderUploadedFiles()}
 
 				<div className="footer f-flex f-flex-direction-vertical f-vertical-align-center">
-					<p>made by <a href="https://telegram.me/lis355">@lis355</a></p>
-					<p>sharya <a href="https://github.com/lis355/sharya">github page</a></p>
+					<p>made by <a href="https://telegram.me/lis355" target="_blank" rel="noopener noreferrer">@lis355</a></p>
+					<p>sharya <a href="https://github.com/lis355/sharya" target="_blank" rel="noopener noreferrer">github page</a></p>
 				</div>
 			</div>
 		);

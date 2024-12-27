@@ -7,6 +7,8 @@ const FIELD_PATH = "path";
 const FIELD_USER_TOKEN = "userToken";
 const FIELD_DATE = "date";
 const FIELD_STORAGE_TIME = "storageTime";
+const FIELD_DOWNLOADS_AMOUNT = "downloadsAmount";
+const FIELD_IS_SINGLE_DOWNLOAD = "isSingleDownload";
 
 const INDEX_TINY_ID = "tinyIdIndex";
 const INDEX_USER_TOKEN = "userTokenIndex";
@@ -30,7 +32,9 @@ export default class UploadedFile {
 				${FIELD_PATH} TEXT,
 				${FIELD_USER_TOKEN} TEXT,
 				${FIELD_DATE} INTEGER,
-				${FIELD_STORAGE_TIME} INTEGER
+				${FIELD_STORAGE_TIME} INTEGER,
+				${FIELD_DOWNLOADS_AMOUNT} INTEGER,
+				${FIELD_IS_SINGLE_DOWNLOAD} INTEGER
 			) STRICT;
 
 			CREATE INDEX IF NOT EXISTS ${INDEX_TINY_ID} ON ${DB_NAME} (${FIELD_TINY_ID});
@@ -45,10 +49,20 @@ export default class UploadedFile {
 		console.log(JSON.stringify(this.database.prepare(`SELECT * FROM ${DB_NAME}`).all(), null, 2));
 	}
 
-	createRecord({ tinyId, name, size, path, userToken, date, storageTime }) {
+	createRecord({ tinyId, name, size, path, userToken, date, storageTime, isSingleDownload }) {
 		return this.database
-			.prepare(`INSERT INTO ${DB_NAME} (${FIELD_TINY_ID}, ${FIELD_NAME}, ${FIELD_SIZE}, ${FIELD_PATH}, ${FIELD_USER_TOKEN}, ${FIELD_DATE}, ${FIELD_STORAGE_TIME}) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`)
-			.get(tinyId, name, size, path, userToken, date, storageTime);
+			.prepare(`INSERT INTO ${DB_NAME} (
+				${FIELD_TINY_ID},
+				${FIELD_NAME},
+				${FIELD_SIZE},
+				${FIELD_PATH},
+				${FIELD_USER_TOKEN},
+				${FIELD_DATE},
+				${FIELD_STORAGE_TIME},
+				${FIELD_DOWNLOADS_AMOUNT},
+				${FIELD_IS_SINGLE_DOWNLOAD}
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+			.get(tinyId, name, size, path, userToken, date, storageTime, 0, isSingleDownload ? 1 : 0);
 	}
 
 	deleteRecordByTinyId(tinyId) {
@@ -79,5 +93,11 @@ export default class UploadedFile {
 		return this.database
 			.prepare(`SELECT * FROM ${DB_NAME} WHERE ${FIELD_TINY_ID} = (?) AND ${FIELD_USER_TOKEN} = (?)`)
 			.get(tinyId, userToken);
+	}
+
+	incrementDownloadsAmountByTinyId(tinyId) {
+		this.database
+			.prepare(`UPDATE ${DB_NAME} SET ${FIELD_DOWNLOADS_AMOUNT} = ${FIELD_DOWNLOADS_AMOUNT} + 1 WHERE ${FIELD_TINY_ID} = (?)`)
+			.run(tinyId);
 	}
 }
