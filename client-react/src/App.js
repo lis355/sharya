@@ -47,7 +47,7 @@ class UploadedFileRow extends React.Component {
 	render() {
 		const nameString = formatName(this.props.file.name, this.props.nameMaxLength);
 		const sizeString = `[${formatBytes(this.props.file.size)}]`;
-		const url = urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId);
+		const url = new URL(urlJoin(process.env.REACT_APP_BASE_URL, this.props.file.tinyId));
 
 		return (
 			<tr>
@@ -55,13 +55,25 @@ class UploadedFileRow extends React.Component {
 					<div className="d-flex f-flex-direction-vertical">
 						<p style={{ marginTop: "0.25rem" }}>{nameString}</p>
 						<p style={{ fontSize: "0.8rem", marginBottom: "0.25rem" }}>
-							<a href={url} target="_blank" rel="noopener noreferrer">{url}</a> | ~{dayjs.duration(this.props.file.expireDate - dayjs()).humanize()} remain | {this.props.file.isSingleDownload ? "single download" : `${this.props.file.downloadsAmount} downloads`}
+							{url.href.slice(url.protocol.length + 2)} | ~{dayjs.duration(this.props.file.expireDate - dayjs()).humanize()} remain | {this.props.file.isSingleDownload ? "single download" : `${this.props.file.downloadsAmount} downloads`}
 						</p>
 					</div>
 				</td>
 				<td className="fit" style={{ textAlign: "right" }}>{sizeString}</td>
 				<td className="fit">
-					<button onClick={() => window.navigator.clipboard.writeText(url)}>copy link</button>
+					<button onClick={() => {
+						const lines = [
+							nameString,
+							`~${dayjs.duration(this.props.file.expireDate - dayjs()).humanize()} remain (till ${dayjs(this.props.file.expireDate).toString()})`
+						];
+
+						if (this.props.file.isSingleDownload) lines.push("single download");
+
+						lines.push("");
+						lines.push(url.href);
+
+						window.navigator.clipboard.writeText(lines.join("\n"));
+					}}>copy link</button>
 				</td>
 				<td className="fit">
 					<button onClick={this.props.deleteHandler}>delete</button>
