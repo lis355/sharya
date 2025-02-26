@@ -1,5 +1,5 @@
-import path from "path";
 import { DatabaseSync } from "node:sqlite";
+import path from "node:path";
 
 import UploadedFile from "./models/UploadedFile.js";
 

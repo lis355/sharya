@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "common"
+		},
+		{
+			"path": "server-nodejs"
+		},
+		{
+			"path": "server-go"
+		},
+		{
+			"path": "client-react"
+		},
+		{
+			"path": "uploader-script-nodejs"
+		}
+	],
+	"settings": {
+	}
+}
