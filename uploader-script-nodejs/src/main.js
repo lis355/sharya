@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +9,9 @@ import dayjsDuration from "dayjs/plugin/duration.js";
 import dayjsRelativeTime from "dayjs/plugin/relativeTime.js";
 import FormData from "form-data";
 import notifier from "node-notifier";
+import urlJoin from "url-join";
+
+import { randomHash } from "../../common/js/tools/hash.js";
 
 dotenv();
 
@@ -24,73 +26,80 @@ function formatBytes(bytes, decimals = 2) {
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
 }
 
-import { randomHash } from "../../common/js/tools/hash";
-import { randomHash } from "../../common/js/tools/dayjs";
-
 (async () => {
-	let serverUrl;
 	try {
-		serverUrl = new URL(process.env.SHARYA_SERVER_URL);
-	} catch (e) {
-		console.error(`Bad environment variable SHARYA_SERVER_URL`);
-
-		return process.exit(1);
-	}
-
-	const tokenFilePath = path.join(import.meta.dirname, ".token");
-	let token;
-	if (!fs.existsSync(tokenFilePath)) {
-		token = randomHash();
-		fs.writeFileSync(tokenFilePath, token, "utf-8");
-	} else {
-		token = fs.readFileSync(tokenFilePath, "utf-8");
-	}
-
-	const formData = new FormData();
-
-	const filePath = process.argv[2];
-	const fileName = path.basename(filePath);
-
-	formData.append("file", Buffer.from(fs.readFileSync(filePath)), fileName);
-	formData.append("name", fileName);
-	formData.append("storageTime", 1000 * 60 * 60 * 24 * 3);
-	formData.append("isSingleDownload", "false");
-
-	const response = await fetch(BASE_URL + "api/upload", {
-		method: "POST",
-		body: formData.getBuffer(),
-		headers: {
-			...formData.getHeaders(),
-			"sharya-token": token
+		const serverUrl = process.env.SHARYA_SERVER_URL;
+		try {
+			new URL(serverUrl);
+		} catch (_) {
+			throw new Error("Bad environment variable SHARYA_SERVER_URL");
 		}
-	});
 
-	const json = await response.json();
+		const tokenFilePath = path.join(import.meta.dirname, ".token");
+		let token;
+		if (!fs.existsSync(tokenFilePath)) {
+			token = randomHash();
+			fs.writeFileSync(tokenFilePath, token, "utf-8");
+		} else {
+			token = fs.readFileSync(tokenFilePath, "utf-8");
+		}
 
-	const nameString = json.name;
-	const sizeString = `[${formatBytes(json.size)}]`;
-	const url = BASE_URL + json.tinyId;
-	const expireDate = dayjs(json.date + json.storageTime);
+		const formData = new FormData();
 
-	clipboard.writeSync(url);
+		const filePath = process.argv[2];
+		if (!fs.existsSync(filePath) ||
+			!fs.lstatSync(filePath).isFile()) throw new Error("No file to upload");
 
-	notifier.notify({
-		title: "Sharya",
-		message: [
-			`File ${fileName} uploaded successfully ${sizeString}`,
+		const fileName = path.basename(filePath);
+
+		formData.append("file", Buffer.from(fs.readFileSync(filePath)), fileName);
+		formData.append("name", fileName);
+		formData.append("storageTime", dayjs.duration(3, "days").asMilliseconds());
+		formData.append("isSingleDownload", "false");
+
+		const response = await fetch(urlJoin(serverUrl, "api", "upload"), {
+			method: "POST",
+			body: formData.getBuffer(),
+			headers: {
+				...formData.getHeaders(),
+				"sharya-token": token
+			}
+		});
+
+		const json = await response.json();
+
+		const nameString = json.name;
+		const sizeString = `[${formatBytes(json.size)}]`;
+		const expireDate = dayjs(json.date + json.storageTime);
+
+		const message = [
+			`File ${nameString} uploaded successfully ${sizeString}`,
 			`~${dayjs.duration(expireDate - dayjs()).humanize()} remain (till ${dayjs(expireDate).toString()})`,
 			"Link copied to clipboard"
-		].join(os.EOL),
-		icon: null
-	}, () => {
-		process.exit(0);
-	});
+		].join(os.EOL);
 
-	// console.log(json);
+		const link = urlJoin(serverUrl, json.tinyId);
 
-	// process.stdin.setRawMode(true);
-	// process.stdin.resume();
-	// process.stdin.on("data", () => {
-	// 	process.exit(0);
-	// });
+		console.log(message, link);
+
+		await clipboard.write(link);
+
+		await new Promise(resolve => {
+			notifier.notify({
+				title: "Sharya",
+				message,
+				icon: null
+			}, () => {
+				resolve();
+			});
+		});
+	} catch (error) {
+		console.error(error);
+	}
+
+	process.stdin.setRawMode(true);
+	process.stdin.resume();
+	process.stdin.on("data", process.exit.bind(process, 0));
+
+	process.exit();
 })();

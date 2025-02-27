@@ -4,6 +4,12 @@
 	"type": "module",
 	"scripts": {},
 	"dependencies": {
+		"clipboardy": "^4.0.0",
+		"dayjs": "^1.11.13",
+		"dotenv-flow": "^4.1.0",
+		"form-data": "^4.0.2",
+		"node-notifier": "^10.0.1",
+		"url-join": "^5.0.0"
 	},
 	"devDependencies": {
 		"@babel/eslint-parser": "^7.23.3",
