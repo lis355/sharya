@@ -1,0 +1,22 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "start",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"program": "${workspaceFolder}/src/main.js",
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"args": [
+				"C:/Internet/Vyalov_S_s_-_Skhemy_Lechenia_Terapia_Vnutrennikh_Bolezney_dostovernaya_Meditsina_V_Infografike_-_2023.pdf"
+			]
+		}
+	]
+}

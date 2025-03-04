@@ -1,21 +1,17 @@
 {
-	"name": "sharya-server",
+	"name": "sharya-uploader-script",
 	"version": "1.0.0",
 	"license": "MIT",
 	"type": "module",
-	"engines": {
-		"node": ">=v22.8.0"
-	},
 	"scripts": {},
 	"dependencies": {
-		"cors": "^2.8.5",
+		"chalk": "^5.4.1",
+		"clipboardy": "^4.0.0",
 		"dayjs": "^1.11.13",
 		"dotenv-flow": "^4.1.0",
-		"express": "^4.19.2",
-		"filenamify": "^6.0.0",
-		"fs-extra": "^11.2.0",
-		"http-status-codes": "^2.3.0",
-		"multer": "^1.4.5-lts.1"
+		"form-data": "^4.0.2",
+		"node-notifier": "^10.0.1",
+		"url-join": "^5.0.0"
 	},
 	"devDependencies": {
 		"@babel/eslint-parser": "^7.23.3",

@@ -1,10 +1,10 @@
-import path from "path";
+import path from "node:path";
 
 import express from "express";
 import httpStatus from "http-status-codes";
 import multer from "multer";
 
-import { randomHash } from "../tools/hash.js";
+import { randomHash } from "../../../common/js/tools/hash.js";
 import storage from "../storage.js";
 
 export const apiRouter = express.Router();
@@ -41,6 +41,9 @@ apiRouter.get("/auth/", (req, res) => {
 });
 
 apiRouter.post("/upload/",
+	(req, res, next) => {
+		return next();
+	},
 	multer({
 		storage: multer.diskStorage({
 			destination: (req, file, callback) => {
