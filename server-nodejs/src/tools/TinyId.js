@@ -1,5 +1,5 @@
 export default class TinyId {
-	static TINY_ID_CHARACTERS = ["bcdefghijklmnopqrstuvwxyz", "aeiouy"];
+	static TINY_ID_CHARACTERS = ["bcdfghjklmnpqrstvwxz", "aeiouy"];
 	static TINY_ID_LENGTH = 4;
 
 	constructor(tinyId) {

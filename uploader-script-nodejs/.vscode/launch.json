@@ -11,7 +11,12 @@
 			"skipFiles": [
 				"<node_internals>/**"
 			],
-			"program": "${workspaceFolder}/src/main.js"
+			"program": "${workspaceFolder}/src/main.js",
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"args": [
+				"C:/Internet/Vyalov_S_s_-_Skhemy_Lechenia_Terapia_Vnutrennikh_Bolezney_dostovernaya_Meditsina_V_Infografike_-_2023.pdf"
+			]
 		}
 	]
 }

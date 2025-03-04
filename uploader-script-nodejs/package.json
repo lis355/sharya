@@ -1,9 +1,11 @@
 {
 	"name": "sharya-uploader-script",
 	"version": "1.0.0",
+	"license": "MIT",
 	"type": "module",
 	"scripts": {},
 	"dependencies": {
+		"chalk": "^5.4.1",
 		"clipboardy": "^4.0.0",
 		"dayjs": "^1.11.13",
 		"dotenv-flow": "^4.1.0",
