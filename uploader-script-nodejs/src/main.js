@@ -23,13 +23,12 @@ function formatBytes(bytes, decimals = 2) {
 	const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
+	return `[${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}]`;
 }
 
-(async () => {
+async function run() {
 	try {
 		console.log(`Sharya uploader v${JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "..", "package.json"), "utf-8")).version}`);
-		console.log();
 
 		const serverUrl = process.env.SHARYA_SERVER_URL;
 		try {
@@ -37,6 +36,8 @@ function formatBytes(bytes, decimals = 2) {
 		} catch (_) {
 			throw new Error("Bad environment variable SHARYA_SERVER_URL");
 		}
+
+		console.log(`Server URL: ${serverUrl}`);
 
 		const storageDurationInMilliseconds = dayjs.duration(process.env.SHARYA_FILE_STORAGE_DURATION).asMilliseconds();
 		if (!Number.isFinite(storageDurationInMilliseconds) ||
@@ -51,50 +52,75 @@ function formatBytes(bytes, decimals = 2) {
 			token = fs.readFileSync(tokenFilePath, "utf-8");
 		}
 
-		const formData = new FormData();
+		console.log(`Sharya token: ${token}`);
 
-		const filePath = process.argv[2];
-		if (!fs.existsSync(filePath) ||
-			!fs.lstatSync(filePath).isFile()) throw new Error("No file to upload");
+		console.log();
 
-		const fileName = path.basename(filePath);
-
-		formData.append("file", Buffer.from(fs.readFileSync(filePath)), fileName);
-		formData.append("name", fileName);
-		formData.append("storageTime", storageDurationInMilliseconds);
-		formData.append("isSingleDownload", "false");
-
-		const response = await fetch(urlJoin(serverUrl, "api", "upload"), {
-			method: "POST",
-			body: formData.getBuffer(),
-			headers: {
-				...formData.getHeaders(),
-				"sharya-token": token
-			}
+		const filePaths = process.argv.slice(2);
+		filePaths.forEach(filePath => {
+			if (!fs.existsSync(filePath) ||
+				!fs.lstatSync(filePath).isFile()) throw new Error(`No file to upload ${filePath}`);
 		});
 
-		const json = await response.json();
+		async function uploadFile(filePath) {
+			const fileName = path.basename(filePath);
 
-		const nameString = json.name;
-		const sizeString = `[${formatBytes(json.size)}]`;
-		const expireDate = dayjs(json.date + json.storageTime);
+			const formData = new FormData();
+			formData.append("file", Buffer.from(fs.readFileSync(filePath)), fileName);
+			formData.append("name", fileName);
+			formData.append("storageTime", storageDurationInMilliseconds);
+			formData.append("isSingleDownload", "false");
 
-		const link = urlJoin(serverUrl, json.tinyId);
+			const response = await fetch(urlJoin(serverUrl, "api", "upload"), {
+				method: "POST",
+				body: formData.getBuffer(),
+				headers: {
+					...formData.getHeaders(),
+					"sharya-token": token
+				}
+			});
 
-		console.log(`File ${nameString} uploaded successfully ${sizeString}`);
-		console.log(`~${dayjs.duration(expireDate - dayjs()).humanize()} remain (till ${dayjs(expireDate).toString()})`);
-		console.log();
-		console.log(chalk.bgWhite(chalk.black(link)));
-		console.log();
-		console.log("Link copied to clipboard");
+			const json = await response.json();
 
-		await clipboard.write(link);
+			return {
+				name: json.name,
+				size: json.size,
+				expireDate: dayjs(json.date + json.storageTime),
+				link: urlJoin(serverUrl, json.tinyId)
+			};
+		}
 
-		notifier.notify({
-			title: "Sharya",
-			message: `File ${nameString} uploaded successfully ${sizeString}`,
-			icon: null
+		filePaths.forEach(filePath => {
+			console.log(`Start uploading file ${filePath}`);
 		});
+
+		console.log();
+
+		const uploadedFileInfos = await Promise.all(filePaths.map(async filePath => {
+			const { name, size, expireDate, link } = await uploadFile(filePath);
+
+			console.log(`File ${name} ${formatBytes(size)} uploaded successfully`);
+			console.log(`~${dayjs.duration(expireDate - dayjs()).humanize()} remain (till ${dayjs(expireDate).toString()})`);
+			console.log();
+			console.log(chalk.bgWhite(chalk.black(link)));
+			console.log();
+
+			return { name, size, expireDate, link };
+		}));
+
+		if (uploadedFileInfos.length === 1) {
+			const { name, size, link } = uploadedFileInfos[0];
+
+			console.log("Link copied to clipboard");
+
+			await clipboard.write(link);
+
+			notifier.notify({
+				title: "Sharya",
+				message: `File ${name} uploaded successfully ${formatBytes(size)}`,
+				icon: null
+			});
+		}
 	} catch (error) {
 		console.error(error.message);
 	}
@@ -105,4 +131,6 @@ function formatBytes(bytes, decimals = 2) {
 	process.stdin.setRawMode(true);
 	process.stdin.resume();
 	process.stdin.on("data", () => process.exit());
-})();
+}
+
+run();
