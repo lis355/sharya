@@ -5,6 +5,9 @@ import fs from "fs-extra";
 
 dotenv();
 
+process.env.IS_DEVELOPMENT = Boolean(process.env.NODE_OPTIONS ||
+	process.env.VSCODE_INSPECTOR_OPTIONS);
+
 process.env.CWD = path.resolve(process.cwd());
 process.env.DATA = path.join(process.env.CWD, ".data");
 

@@ -3,13 +3,18 @@ import path from "node:path";
 import express from "express";
 import httpStatus from "http-status-codes";
 import multer from "multer";
+import cookieParser from "cookie-parser";
 
 import { randomHash } from "../../../common/js/tools/hash.js";
 import storage from "../storage.js";
 
 export const apiRouter = express.Router();
 
-const HEADER_TOKEN = "sharya-token";
+const COOKIES_SECRET = "sharya-cookies";
+apiRouter.use(cookieParser(COOKIES_SECRET));
+
+const HEADER_TOKEN_NAME = "sharya-token";
+const COOKIE_TOKEN_NAME = "sharya-token";
 
 function generateRandomUserToken() {
 	return randomHash();
@@ -28,16 +33,18 @@ function serializeForClient(record) {
 }
 
 apiRouter.use((req, res, next) => {
-	const userToken = req.headers[HEADER_TOKEN];
-	if (!userToken) req.headers[HEADER_TOKEN] = generateRandomUserToken();
+	req.userToken = req.headers[HEADER_TOKEN_NAME];
+	if (!req.userToken) {
+		req.userToken = req.signedCookies[COOKIE_TOKEN_NAME];
+
+		if (!req.userToken) {
+			req.userToken = generateRandomUserToken();
+
+			res.cookie(COOKIE_TOKEN_NAME, req.userToken, { signed: true });
+		}
+	}
 
 	return next();
-});
-
-apiRouter.get("/auth/", (req, res) => {
-	const userToken = req.headers[HEADER_TOKEN];
-
-	return res.status(httpStatus.OK).send(userToken);
 });
 
 apiRouter.post("/upload/",
@@ -64,14 +71,13 @@ apiRouter.post("/upload/",
 	(req, res) => {
 		const { file, body } = req;
 		const { storageTime, isSingleDownload } = body;
-		const userToken = req.headers[HEADER_TOKEN];
 
 		const uploadedFileRecord = storage.createRecord({
 			tinyId: file.tinyId,
 			name: body.name,
 			size: file.size,
 			path: file.filePath,
-			userToken,
+			userToken: req.userToken,
 			storageTime: Number(storageTime),
 			isSingleDownload: isSingleDownload === "true"
 		});
@@ -83,9 +89,8 @@ apiRouter.post("/upload/",
 apiRouter.delete("/upload/:tinyId/",
 	(req, res) => {
 		const tinyId = req.params.tinyId;
-		const userToken = req.headers[HEADER_TOKEN];
 
-		const uploadedFileRecord = storage.findRecordByTinyIdAndUserToken(tinyId, userToken);
+		const uploadedFileRecord = storage.findRecordByTinyIdAndUserToken(tinyId, req.userToken);
 		if (!uploadedFileRecord) return res.sendStatus(httpStatus.NOT_FOUND);
 
 		storage.deleteRecordByTinyId(tinyId);
@@ -95,9 +100,7 @@ apiRouter.delete("/upload/:tinyId/",
 );
 
 apiRouter.get("/uploadedFiles/", (req, res) => {
-	const userToken = req.headers[HEADER_TOKEN];
-
-	const uploadedFileRecords = storage.findRecordsByUserToken(userToken);
+	const uploadedFileRecords = storage.findRecordsByUserToken(req.userToken);
 
 	return res.status(httpStatus.OK).send(uploadedFileRecords.map(serializeForClient));
 });

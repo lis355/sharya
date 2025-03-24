@@ -7,8 +7,11 @@ import App from "./App";
 import "normalize.css";
 import "./index.scss";
 
-const requestProvider = axios.create({
-});
+
+const axiosOptions = {};
+if (process.env.NODE_ENV === "development") axiosOptions.withCredentials = true;
+
+const requestProvider = axios.create(axiosOptions);
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

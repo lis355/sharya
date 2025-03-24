@@ -90,8 +90,6 @@ class UploadedFileRow extends React.Component {
 // It happens only in development environment, while in production componentDidMount is called only once even with <React.StrictMode>.
 let appMounted = false;
 
-const TOKEN_HEADER = "sharya-token";
-
 const RENDER_UPLOADING_FILES_AFTER_DURATION = dayjs.duration({ seconds: 0.5 });
 
 const STORAGE_TIMES = [
@@ -123,19 +121,7 @@ class App extends React.Component {
 
 		// console.log(localStorage.getItem(HEADER_TOKEN));
 
-		await this.requestAuth();
 		await this.requestUploadedFiles();
-	}
-
-	async requestAuth() {
-		this.props.requestProvider.defaults.headers.common[TOKEN_HEADER] = localStorage.getItem(TOKEN_HEADER);
-
-		const authResponse = await this.props.requestProvider({
-			url: urlJoin(process.env.REACT_APP_BASE_URL, "api", "auth"),
-			method: "GET"
-		});
-
-		localStorage.setItem(TOKEN_HEADER, authResponse.data);
 	}
 
 	async requestUploadedFiles() {

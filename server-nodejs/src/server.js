@@ -6,7 +6,14 @@ import { appRouter } from "./routes/app.js";
 
 const application = express();
 application.disable("x-powered-by");
-application.use(cors());
+
+const corsOptions = {};
+if (process.env.IS_DEVELOPMENT === "true") {
+	corsOptions.credentials = true;
+	corsOptions.origin = process.env.FRONT_END_DEVELOPMENT_URL;
+}
+
+application.use(cors(corsOptions));
 
 application.use("/api/", apiRouter);
 application.use(appRouter);
