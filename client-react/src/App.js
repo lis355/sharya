@@ -172,8 +172,8 @@ class App extends React.Component {
 			<div className="f-flex f-flex-direction-horizontal f-vertical-align-center">
 				<p className="mr">storage period</p>
 				<select className="mr"
-					value={this.state.storageTime}
-					onChange={event => this.setState({ storageTime: event.target.value })}
+					value={this.state.storageTime.asMilliseconds()}
+					onChange={event => this.setState({ storageTime: dayjs.duration({ milliseconds: event.target.value }) })}
 				>
 					{STORAGE_TIMES.map((duration, index) => (
 						<option key={index} value={duration}>{duration.humanize()}</option>
