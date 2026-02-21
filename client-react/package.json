@@ -19,8 +19,8 @@
 		"eslint-config-react-app": "^7.0.1"
 	},
 	"scripts": {
-		"start": "react-scripts start",
-		"build": "react-scripts build",
+		"start": "NODE_OPTIONS=--no-experimental-webstorage react-scripts start",
+		"build": "NODE_OPTIONS=--no-experimental-webstorage react-scripts build",
 		"eject": "react-scripts eject"
 	},
 	"browserslist": {

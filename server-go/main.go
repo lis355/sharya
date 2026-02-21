@@ -1,30 +1,25 @@
 package main
 
 import (
-	"sharya-server/components/uploadedfiles"
-	"sharya-server/db"
-	uploadedfile "sharya-server/db/models"
+	"sharya-server/app"
+	"sharya-server/database"
 	"sharya-server/server"
-	"sharya-server/tools"
+	"sharya-server/services"
+	"sharya-server/utils/log"
 )
 
 func main() {
-	tools.InitializeEnvironment()
-	tools.InitializeDataDirectory()
+	app.Initialize()
+	log.Initialize()
 
-	db.OpenDB()
+	database.Initialize()
 
-	if tools.IsDevelopment {
-		// uploadedfile.Clear()
+	if app.IsDevelopment {
+		// database.DB.UploadedFiles.Clear()
+		// database.DB.UploadedFiles.DebugPrintAllRecords()
 	}
 
-	uploadedfile.Initialize()
+	services.UploadFilesManager.Initialize()
 
-	if tools.IsDevelopment {
-		// uploadedfile.DebugPrintAllRecords()
-	}
-
-	uploadedfiles.UploadFilesManager.Initialize()
-
-	server.StartServer()
+	server.Start()
 }

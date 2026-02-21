@@ -62,6 +62,11 @@ class UploadedFileRow extends React.Component {
 				<td className="fit" style={{ textAlign: "right" }}>{sizeString}</td>
 				<td className="fit">
 					<button onClick={() => {
+						window.navigator.clipboard.writeText(url.href);
+					}}>copy link</button>
+				</td>
+				<td className="fit">
+					<button onClick={() => {
 						const lines = [
 							nameString,
 							`~${dayjs.duration(this.props.file.expireDate - dayjs()).humanize()} remain (till ${dayjs(this.props.file.expireDate).toString()})`
@@ -73,7 +78,7 @@ class UploadedFileRow extends React.Component {
 						lines.push(url.href);
 
 						window.navigator.clipboard.writeText(lines.join("\n"));
-					}}>copy link</button>
+					}}>copy info</button>
 				</td>
 				<td className="fit">
 					<button onClick={this.props.deleteHandler}>delete</button>
